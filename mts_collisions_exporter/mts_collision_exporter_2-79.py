@@ -1,7 +1,7 @@
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (1, 5),
+    "version": (1, 6),
     "blender": (2, 79, 0),
     "location": "Object —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
@@ -263,14 +263,14 @@ class CollisionSettings(bpy.types.PropertyGroup):
         max = 1000
         )
         
-    subdivideWidth: FloatProperty(
+    subdivideWidth= FloatProperty(
         name = "Subdivision Width",
         default = 0.0,
         min = 0,
         max = 1000
         )
         
-    subdivideHeight: FloatProperty(
+    subdivideHeight= FloatProperty(
         name = "Subdivision Height",
         default = 0.0,
         min = 0,
