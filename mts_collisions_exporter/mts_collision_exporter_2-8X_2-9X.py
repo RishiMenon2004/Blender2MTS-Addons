@@ -1,7 +1,7 @@
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (1, 5),
+    "version": (1, 6),
     "blender": (2, 90, 0),
     "location": "Object —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
@@ -10,6 +10,7 @@ bl_info = {
 
 import bpy
 import math
+import numpy as NP
 from bpy_extras.io_utils import ExportHelper
 from bpy.props import (
         BoolProperty,
@@ -39,15 +40,19 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             if obj.mts_collision_settings.isCollision and not obj.mts_collision_settings.isDoor:
                 if firstEntry:
                     f.write("    {\n")
-                if (obj.mts_collision_settings.subdivideSize > 0) or (obj.dimensions[0] != obj.dimensions[1]):
+                if (obj.mts_collision_settings.subdivideWidth > 0) or (obj.dimensions[0] != obj.dimensions[1]):
                     # We need to break this box into smaller boxes
-                    if obj.mts_collision_settings.subdivideSize > 0:
+                    if obj.mts_collision_settings.subdivideWidth > 0 or obj.mts_collision_settings.subdivideHeight:
                         # Boxes are of a specified size
-                        boxSize = obj.mts_collision_settings.subdivideSize
-                        boxSizeZ = boxSize
+                        boxSize = obj.mts_collision_settings.subdivideWidth if obj.mts_collision_settings.subdivideWidth > 0 else min(obj.dimensions[0], obj.dimensions[1])
+                        if boxSize > min(obj.dimensions[0], obj.dimensions[1]):
+                            boxSize = min(obj.dimensions[0], obj.dimensions[1])
+                        boxSizeZ = obj.mts_collision_settings.subdivideHeight if obj.mts_collision_settings.subdivideHeight > 0 else obj.dimensions[2]
+                        if boxSizeZ > obj.dimensions[2]:
+                            boxSizeZ = obj.dimensions[2]
                         numX = math.ceil(obj.dimensions[0] / boxSize)
                         numY = math.ceil(obj.dimensions[1] / boxSize)
-                        numZ = math.ceil(obj.dimensions[2] / boxSize)
+                        numZ = math.ceil(obj.dimensions[2] / boxSizeZ)
                     else:
                         # Length and width are unequal, so break it into multiple boxes in the long axis ONLY
                         boxSize = min(obj.dimensions[0], obj.dimensions[1])
@@ -73,33 +78,32 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
 
                     # List the coordinates for each dimension
                     # Different calculations for even vs odd numbers of boxes
-                    origin = obj.location[0]
+                    origin = obj.location
                     offset = 0 if numX % 2 == 1 else 0.5*(boxSize - overlapXper)
-                    xList = [origin] if numX % 2 == 1 else [origin - offset, origin + offset]
+                    xList = [origin[0]] if numX % 2 == 1 else [origin[0] - offset, origin[0] + offset]
                     for n in range((numX-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
                         # Add the next furthest box on each side
-                        xList.insert(0, origin - offset - (n+1)*(boxSize-overlapXper))
-                        xList.append(origin + offset + (n+1)*(boxSize-overlapXper))
+                        xList.insert(0, origin[0] - offset - (n+1)*(boxSize-overlapXper))
+                        xList.append(origin[0] + offset + (n+1)*(boxSize-overlapXper))
 
-                    origin = obj.location[1]
                     offset = 0 if numY % 2 == 1 else 0.5*(boxSize - overlapYper)
-                    yList = [origin] if numY % 2 == 1 else [origin - offset, origin + offset]
+                    yList = [origin[1]] if numY % 2 == 1 else [origin[1] - offset, origin[1] + offset]
                     for n in range((numY-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
                         # Add the next furthest box on each side
                         listLen = len(yList)
-                        yList.insert(0, origin - offset - (n+1)*(boxSize-overlapYper))
-                        yList.append(origin + offset + (n+1)*(boxSize-overlapYper))
+                        yList.insert(0, origin[1] - offset - (n+1)*(boxSize-overlapYper))
+                        yList.append(origin[1] + offset + (n+1)*(boxSize-overlapYper))
 
-                    origin = obj.location[2]
                     offset = 0 if numZ % 2 == 1 else 0.5*(boxSizeZ - overlapZper)
-                    zList = [origin] if numZ % 2 == 1 else [origin - offset, origin + offset]
+                    zList = [origin[2]] if numZ % 2 == 1 else [origin[2] - offset, origin[2] + offset]
                     for n in range((numZ-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
                         # Add the next furthest box on each side
                         listLen = len(zList)
-                        zList.insert(0, origin - offset - (n+1)*(boxSizeZ-overlapZper))
-                        zList.append(origin + offset + (n+1)*(boxSizeZ-overlapZper))
+                        zList.insert(0, origin[2] - offset - (n+1)*(boxSizeZ-overlapZper))
+                        zList.append(origin[2] + offset + (n+1)*(boxSizeZ-overlapZper))
 
                     # Make numX * numY * numZ boxes
+                    rot = [n for n in obj.rotation_euler]
                     for x in xList:
                         for y in yList:
                             for z in zList:
@@ -107,7 +111,13 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                                     f.write(",\n    {\n")
                                 else:
                                     firstEntry = False
-                                self.export_collision_box([x,y,z], [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
+                                # Check if we need to rotate the positions
+                                pos = [x,y,z]
+                                if rot.count(0) == 3: # No rotation
+                                    self.export_collision_box(pos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
+                                else:
+                                    newPos = rotate(pos, rot, origin)
+                                    self.export_collision_box(newPos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
 
 
                 else:
@@ -253,8 +263,15 @@ class CollisionSettings(bpy.types.PropertyGroup):
         max = 1000
         )
         
-    subdivideSize: FloatProperty(
-        name = "Subdivision Size",
+    subdivideWidth: FloatProperty(
+        name = "Subdivision Width",
+        default = 0.0,
+        min = 0,
+        max = 1000
+        )
+        
+    subdivideHeight: FloatProperty(
+        name = "Subdivision Height",
         default = 0.0,
         min = 0,
         max = 1000
@@ -327,7 +344,8 @@ class OBJECT_PT_MTSCollisionPanel(bpy.types.Panel):
         row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids")
         row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
         row = layout.row()
-        row.prop(collisionsettings, "subdivideSize", text = "Subdivision Size")
+        row.prop(collisionsettings, "subdivideWidth", text = "Subdivision Width")
+        row.prop(collisionsettings, "subdivideHeight", text = "Subdivision Height")
 
 #Draw the door hitbox panel
 class OBJECT_PT_MTSDoorsPanel(bpy.types.Panel):
@@ -355,6 +373,22 @@ class OBJECT_PT_MTSDoorsPanel(bpy.types.Panel):
     
 def menu_func_export(self, context):
     self.layout.operator("object.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
+
+def rotate(v, axis, center):
+    # Takes a vector and a rotation axis, and returns the rotated vector
+    relV = NP.subtract(v, center) # Make sure we rotate about the origin
+    cosX = math.cos(axis[0])
+    sinX = math.sin(axis[0])
+    cosY = math.cos(axis[1])
+    sinY = math.sin(axis[1])
+    cosZ = math.cos(axis[2])
+    sinZ = math.sin(axis[2])
+
+    rotatedV = [relV[0]*(cosY*cosZ-sinX*-sinY*sinZ)    + relV[1]*(-sinX*-sinY*cosZ-cosY*sinZ)    + relV[2]*(-cosX*-sinY),
+                relV[0]*(cosX*sinZ)                    + relV[1]*(cosX*cosZ)                     + relV[2]*(-sinX),
+                relV[0]*(-sinY*cosZ+sinX*cosY*sinZ)    + relV[1]*(sinX*cosY*cosZ+sinY*sinZ)      + relV[2]*(cosX*cosY)]
+
+    return NP.add(rotatedV, center) # Add the origin back in when we're done
 
 #keymaps list
 addon_keymaps = []
