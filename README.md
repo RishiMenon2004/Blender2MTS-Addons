@@ -57,13 +57,15 @@
     
     2.2.2. Set the collision box's properties as you wish.
     
-    2.2.3. Scale the cube to your liking, but make sure that the X and Y dimensions are the same
+    2.2.3. Scale the cube to your liking. If the x and y dimensions are not the same, the box will automatically be divided into boxes the size of whichever side is shorter.
     
           [OR]
           
-          Scale the cube to cover the area you want, and set the subdivision size to subdivide the cube into multiple collision boxes of that size, that span the covered area
-          
-    2.2.4. Click on "Export Collisions" and save the file (I hope you know what to do after this)
+          Scale the cube to cover the area you want, and set the subdivision width and height to subdivide the cube into multiple collision boxes of that size, that span the covered area
+    
+    2.2.4. If you want the boxes to be on a diagonal, rotate the cube in the desired direction WHILE IN OBJECT MODE (NOT EDIT MODE)
+    
+    2.2.5. Click on "Export Collisions" and save the file (I hope you know what to do after this)
     
   2.3. Making doors
   
