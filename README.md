@@ -82,3 +82,21 @@
     2.3.5. Position the new cube as you like. DON'T TOUCH THE DOOR OR COLLISION PROEPERTIES OR IT'LL BUG OUT!
     
     2.3.6. Click on "Export Collisions" and save the file. This will export both the collisions and doors together.
+    
+## 3. Mark all selected as Collision tool
+  
+  3.1. Shortcut keymap/keybind
+  
+    3.1.1. Ctrl/Cmd + Shift + D (User Editable)
+    
+  3.2. Useage
+    
+    3.2.1. Select the cubes you want to use as collision or door boxes
+    
+    3.2.2. Press Ctrl/Cmd + Shift + D. This should bring a popup with two options, "Collision" and "Door".
+    
+    3.2.3. If you want to mark the selected boxes as collision boxes, select "Collision".
+           
+           If you want to mark the selected boxes as door hitboxes, select "Door". 
+           
+           This is will set the "Collision" or "Door" property of the cubes as true. One thing you have to make sure to do is to select the Open Pos Box of the door hitboxes. This is will not be automatically set.
