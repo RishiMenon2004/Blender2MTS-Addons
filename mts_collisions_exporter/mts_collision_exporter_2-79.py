@@ -194,7 +194,10 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             
         if colset.activateOnSeated:
             f.write(",\n        \"activateOnSeated\": true")
-        
+            
+        if colset.ignoresClicks:
+            f.write(",\n        \"ignoresClicks\": true")
+            
         f.write("\n    }")
 
 class SCENE_OT_MarkAsCollision(bpy.types.Operator):
