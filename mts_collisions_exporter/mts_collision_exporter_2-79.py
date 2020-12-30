@@ -306,6 +306,11 @@ class CollisionSettings(bpy.types.PropertyGroup):
         default = False
         )
         
+    ignoresClicks: BoolPropery(
+        name = "Ignores User Clicks",
+        default = False
+        )
+        
     openPos= PointerProperty(
         type = bpy.types.Object,
         name = "Open Position Box",
@@ -371,6 +376,8 @@ class OBJECT_PT_MTSDoorsPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(collisionsettings, "closeOnMovement", text = "Close on Movement")
         row.prop(collisionsettings, "activateOnSeated", text = "Activate When Seated")
+        row = layout.row()
+        row.prop(collisionsettings, "ignoresClicks", text = "Ignores Clicks")
         row = layout.row()
         row.prop(collisionsettings, "openPos", text = "Open Pos Box")
     
