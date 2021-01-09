@@ -1,7 +1,7 @@
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (1, 6),
+    "version": (1, 7),
     "blender": (2, 90, 0),
     "location": "Object —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
@@ -306,6 +306,11 @@ class CollisionSettings(bpy.types.PropertyGroup):
         default = False
         )
         
+    ignoresClicks: BoolPropery(
+        name = "Ignores User Clicks",
+        default = False
+        )
+        
     openPos: PointerProperty(
         type = bpy.types.Object,
         name = "Open Position Box",
@@ -372,6 +377,7 @@ class OBJECT_PT_MTSDoorsPanel(bpy.types.Panel):
         row.prop(collisionsettings, "closeOnMovement", text = "Close on Movement")
         row.prop(collisionsettings, "activateOnSeated", text = "Activate When Seated")
         row = layout.row()
+        row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
         row.prop(collisionsettings, "openPos", text = "Open Pos Box")
     
 def menu_func_export(self, context):
