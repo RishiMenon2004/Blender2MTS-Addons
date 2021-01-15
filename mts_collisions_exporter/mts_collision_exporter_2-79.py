@@ -306,7 +306,7 @@ class CollisionSettings(bpy.types.PropertyGroup):
         default = False
         )
         
-    ignoresClicks: BoolPropery(
+    ignoresClicks= BoolPropery(
         name = "Ignores User Clicks",
         default = False
         )
