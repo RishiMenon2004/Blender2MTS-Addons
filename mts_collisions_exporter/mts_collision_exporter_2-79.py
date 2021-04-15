@@ -1,7 +1,7 @@
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (1, 7),
+    "version": (1, 6),
     "blender": (2, 79, 0),
     "location": "Object —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
@@ -11,7 +11,8 @@ bl_info = {
 import bpy
 import math
 import numpy as NP
-from bpy_extras.io_utils import ExportHelper
+import json
+from bpy_extras.io_utils import (ExportHelper, ImportHelper)
 from bpy.props import (
         BoolProperty,
         FloatProperty,
@@ -19,6 +20,115 @@ from bpy.props import (
         EnumProperty,
         PointerProperty,
         )
+
+#importer
+class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
+    bl_idname = "object.import_collision_boxes"
+    bl_label = "Import Collisions"
+    
+    filename_ext = ".json"
+    filter_glob= StringProperty(
+            default="*.json",
+            options={'HIDDEN'},
+            )
+    
+    def execute(self, context):
+        
+        with open(self.filepath, 'r') as f:
+            file = json.loads(f.read())
+        
+            if 'collision' in file:
+                collisions = file['collision']
+                
+                for collision in collisions:
+                    width = collision['width']
+                    height = collision['height']
+                    pos = collision['pos']
+                    
+                    if 'collidesWithLiquids' in collision:
+                        floats = collision['collidesWithLiquids']
+                        self.report({'INFO'}, floats)
+                    else:
+                        floats = False
+                        
+                    if 'isInterior' in collision:
+                        interior = collision['isInterior']
+                        self.report({'INFO'}, interior)
+                    else:
+                        interior = False
+                        
+                    if 'armorThickness' in collision:
+                        armor = collision['armorThickness']
+                        self.report({'INFO'}, armor)
+                    else:
+                        armor = False
+                        
+                    bpy.ops.mesh.primitive_cube_add(radius=2, location=(pos[0], -1*pos[2], pos[1]))
+                    obj = context.object                    
+                    obj.dimensions = (width, width, height)
+                    settings = obj.mts_collision_settings
+                    settings.isCollision = True
+                    settings.collidesWithLiquids = floats
+                    settings.isInterior = interior
+                    settings.armorThickness = armor
+                
+            if 'doors' in file:
+                doors = file['doors']
+                
+                for door in doors:
+                    name = door['name']
+                    width = door['width']
+                    height = door['height']
+                    closedPos = door['closedPos']
+                    openPos = door['openPos']
+                    
+                    if 'closeOnMovement' in door:
+                        movement = door['closeOnMovement']
+                    else:
+                        movement = False
+                        
+                    if 'closedByDefault' in door:
+                        default = door['closedByDefault']
+                    else:
+                        default = False    
+                        
+                    if 'activateOnSeated' in door:
+                        seated = door['activateOnSeated']
+                    else:
+                        seated = False    
+                        
+                    if 'ignoresClicks' in door:
+                        clicks = door['ignoresClicks']
+                    else:
+                        clicks = False
+                    
+                    bpy.ops.mesh.primitive_cube_add(radius=2, location=(closedPos[0], -1*closedPos[2], closedPos[1]))
+                    closedobj = context.object
+                    closedobj.dimensions = (width, width, height)
+                    closedobj.name = name + "_closed"
+                    
+                    bpy.ops.mesh.primitive_cube_add(radius=2, location=(openPos[0], -1*openPos[2], openPos[1]))
+                    openobj = context.object
+                    openobj.dimensions = (width, width, height)
+                    openobj.name = name + "_open"
+                    openobj.draw_type = "WIRE"
+                    
+                    settings = closedobj.mts_collision_settings
+                    
+                    settings.isDoor = True
+                    settings.doorName = name
+                    openobj.mts_collision_settings.doorName = name
+                    settings.closeOnMovement = movement
+                    settings.closedByDefault = default
+                    settings.activateOnSeated = seated
+                    settings.ignoresClicks = clicks
+                    settings.openPos = openobj
+                    
+            if 'collision' not in file or 'doors' not in file:
+                self.report({'ERROR'}, "NO COLLISIONS FOUND")
+        
+        return {'FINISHED'}
+
 #exporter      
 class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
     bl_idname = "object.export_collision_boxes"
@@ -327,61 +437,50 @@ class OBJECT_PT_MTSCollisionBasePanel(bpy.types.Panel):
     
     def draw(self, context):
         layout = self.layout
+        obj = context.object
+        collisionsettings = obj.mts_collision_settings
+        
         row = layout.row()
         row.operator("object.export_collision_boxes")
         row = layout.row()
         row.label(icon='ERROR', text="Note: openPos boxes should not use the Collision or Door property else it'll mess you up")
 
-#Draw the collision box panel
-class OBJECT_PT_MTSCollisionPanel(bpy.types.Panel):
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "object"
-    bl_parent_id = "OBJECT_PT_mtscollision"
-    bl_label = "Collision Box Properties"
-    
-    def draw(self, context):
-        layout = self.layout
-        obj = context.object
-        collisionsettings = obj.mts_collision_settings
-        
+        row = layout.row()
+        row.label(text="Collision Properties:")
+        #Draw the collision box panel
         row = layout.row()
         row.prop(collisionsettings, "isCollision", text = "Collision")
-        row.prop(collisionsettings, "isInterior", text = "Interior Collision") 
+        if collisionsettings.isCollision == True:
+            row.prop(collisionsettings, "isInterior", text = "Interior Collision") 
+            row = layout.row()
+            row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids")
+            row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
+            row = layout.row()
+            row.prop(collisionsettings, "subdivideWidth", text = "Subdivision Width")
+            row.prop(collisionsettings, "subdivideHeight", text = "Subdivision Height")
+            
         row = layout.row()
-        row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids")
-        row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
+        row.label(text="Door Properties:")
+        #Draw the door hitbox panel
         row = layout.row()
-        row.prop(collisionsettings, "subdivideWidth", text = "Subdivision Width")
-        row.prop(collisionsettings, "subdivideHeight", text = "Subdivision Height")
-
-#Draw the door hitbox panel
-class OBJECT_PT_MTSDoorsPanel(bpy.types.Panel):
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "object"
-    bl_parent_id = "OBJECT_PT_mtscollision"
-    bl_label = "Door Collision Properties"
-    
-    def draw(self, context):
-        layout = self.layout
-        obj = context.object
-        collisionsettings = obj.mts_collision_settings
-        
-        row = layout.row()
-        row.prop(collisionsettings, "doorName", text = "Door Name")
-        row = layout.row()
+        if collisionsettings.isDoor == True:
+            row.prop(collisionsettings, "doorName", text = "Door Name")
+            row = layout.row()
         row.prop(collisionsettings, "isDoor", text = "Door")
-        row.prop(collisionsettings, "closedByDefault", text = "Closed by Default") 
-        row = layout.row()
-        row.prop(collisionsettings, "closeOnMovement", text = "Close on Movement")
-        row.prop(collisionsettings, "activateOnSeated", text = "Activate When Seated")
-        row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
-        row = layout.row()
-        row.prop(collisionsettings, "openPos", text = "Open Pos Box")
+        if collisionsettings.isDoor == True:
+            row.prop(collisionsettings, "closedByDefault", text = "Closed by Default") 
+            row = layout.row()
+            row.prop(collisionsettings, "closeOnMovement", text = "Close on Movement")
+            row.prop(collisionsettings, "activateOnSeated", text = "Activate When Seated")
+            row = layout.row()
+            row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
+            row.prop(collisionsettings, "openPos", text = "Open Pos Box")
     
 def menu_func_export(self, context):
     self.layout.operator("object.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
+    
+def menu_func_import(self, context):
+    self.layout.operator("object.import_collision_boxes", text="MTS/IV JSON(.json)")
 
 def rotate(v, axis, center):
     # Takes a vector and a rotation axis, and returns the rotated vector
@@ -403,12 +502,11 @@ def rotate(v, axis, center):
 addon_keymaps = []
 
 classes = (
+    SCENE_OT_ImportCollisions,
     SCENE_OT_ExportCollisions,
     SCENE_OT_MarkAsCollision,
     CollisionSettings,
-    OBJECT_PT_MTSCollisionBasePanel,
-    OBJECT_PT_MTSCollisionPanel,
-    OBJECT_PT_MTSDoorsPanel
+    OBJECT_PT_MTSCollisionBasePanel
 )
         
 def register():
@@ -420,6 +518,7 @@ def register():
     
     #Append the export operator to the export menu
     bpy.types.INFO_MT_file_export.append(menu_func_export)
+    bpy.types.INFO_MT_file_import.append(menu_func_import)
     
     wm = bpy.context.window_manager
     kc = wm.keyconfigs.addon
