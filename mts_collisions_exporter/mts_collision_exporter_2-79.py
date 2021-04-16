@@ -47,19 +47,16 @@ class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     
                     if 'collidesWithLiquids' in collision:
                         floats = collision['collidesWithLiquids']
-                        self.report({'INFO'}, floats)
                     else:
                         floats = False
                         
                     if 'isInterior' in collision:
                         interior = collision['isInterior']
-                        self.report({'INFO'}, interior)
                     else:
                         interior = False
                         
                     if 'armorThickness' in collision:
                         armor = collision['armorThickness']
-                        self.report({'INFO'}, armor)
                     else:
                         armor = False
                         
@@ -125,8 +122,12 @@ class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     settings.openPos = openobj
                     
             if 'collision' not in file or 'doors' not in file:
-                self.report({'ERROR'}, "NO COLLISIONS FOUND")
+                self.report({'ERROR_INVALID_INPUT'}, "NO COLLISIONS FOUND")
+                return {'CANCELLED'}
         
+        self.report({'OPERATOR'}, "Import Finished")
+        bpy.ops.object.select_all(action='TOGGLE')
+        bpy.ops.object.select_all(action='TOGGLE')
         return {'FINISHED'}
 
 #exporter      
