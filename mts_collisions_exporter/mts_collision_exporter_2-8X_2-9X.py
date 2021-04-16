@@ -33,6 +33,15 @@ class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
             )
     
     def execute(self, context):
+        col_name = 'Collision and Doors'
+        if 'Collision and Doors' not in bpy.data.collections:
+            bpy.ops.collection.create(name=col_name)
+            box_collection = bpy.data.collections[col_name]
+            bpy.context.scene.collection.children.link(box_collection)
+            
+        box_collection = bpy.context.view_layer.layer_collection.children[col_name]
+        bpy.context.view_layer.active_layer_collection = box_collection
+        
         
         with open(self.filepath, 'r') as f:
             file = json.loads(f.read())
@@ -123,8 +132,6 @@ class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                 return {'CANCELLED'}
         
         self.report({'OPERATOR'}, "Import Finished")
-        bpy.ops.object.select_all(action='TOGGLE')
-        bpy.ops.object.select_all(action='TOGGLE')
         return {'FINISHED'}
 
 #exporter      
