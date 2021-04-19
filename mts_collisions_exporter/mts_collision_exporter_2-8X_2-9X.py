@@ -147,11 +147,11 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         f = open(self.filepath, "w")
         
         #Write Collisions
-        f.write("\"collision\": [\n") 
+        f.write("{\n    \"collision\": [\n") 
         for obj in context.scene.objects:
             if obj.mts_collision_settings.isCollision and not obj.mts_collision_settings.isDoor:
                 if firstEntry:
-                    f.write("    {\n")
+                    f.write("        {\n")
                 if (obj.mts_collision_settings.subdivideWidth > 0) or (obj.dimensions[0] != obj.dimensions[1]):
                     # We need to break this box into smaller boxes
                     if obj.mts_collision_settings.subdivideWidth > 0 or obj.mts_collision_settings.subdivideHeight:
@@ -220,7 +220,7 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                         for y in yList:
                             for z in zList:
                                 if not(firstEntry):
-                                    f.write(",\n    {\n")
+                                    f.write(",\n        {\n")
                                 else:
                                     firstEntry = False
                                 # Check if we need to rotate the positions
@@ -234,16 +234,16 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
 
                 else:
                     if not(firstEntry):
-                        f.write(",\n    {\n")
+                        f.write(",\n        {\n")
                     self.export_collision_box(obj.location, obj.dimensions, obj.mts_collision_settings, f, context)
 
                 if firstEntry:
                     firstEntry = False
                 
-        f.write("\n],\n\n")
+        f.write("\n    ],\n\n")
         
         #Write Doors
-        f.write("\"doors\": [\n")
+        f.write("    \"doors\": [\n")
         firstEntry = True
         for obj in context.scene.objects:
             if obj.mts_collision_settings.isDoor:
@@ -251,11 +251,12 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                     self.report({'INFO'}, "openPos was not defined for %s" % (obj.name))
                 if firstEntry:
                     firstEntry = False
-                    f.write("    {\n")
+                    f.write("        {\n")
                 else:
-                    f.write(",\n    {\n")
+                    f.write(",\n        {\n")
                 self.export_doors(obj, obj.mts_collision_settings, f, context)
-        f.write("\n],")
+        f.write("\n    ],")
+        f.write("\n}")
         
         self.report({'INFO'}, "Export Complete")
 
@@ -263,54 +264,54 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             
     def export_collision_box(self, location, dimensions, colset, f, context):
         
-        f.write("        \"pos\":[%s, %s, %s],\n" % (round(location[0],5), round(location[2],5), -1*round(location[1],5)))
+        f.write("            \"pos\":[%s, %s, %s],\n" % (round(location[0],5), round(location[2],5), -1*round(location[1],5)))
         
-        f.write("        \"width\": %s, \n" % (round(dimensions[0],5)))
+        f.write("            \"width\": %s, \n" % (round(dimensions[0],5)))
         
-        f.write("        \"height\": %s" % (round(dimensions[2],5)))
+        f.write("            \"height\": %s" % (round(dimensions[2],5)))
         
         if colset.isInterior:
-            f.write(",\n        \"isInterior\": true")
+            f.write(",\n            \"isInterior\": true")
         
         if colset.collidesWithLiquids:
-            f.write(",\n        \"collidesWithLiquids\": true")
+            f.write(",\n            \"collidesWithLiquids\": true")
         
         if colset.armorThickness != 0:
-            f.write(",\n        \"armorThickness\": %s" % (colset.armorThickness))
+            f.write(",\n            \"armorThickness\": %s" % (colset.armorThickness))
         
-        f.write("\n    }")
+        f.write("\n        }")
         
     def export_doors(self, obj, colset, f, context):
         
         openPos = colset.openPos
         
         #write the entries for one collision
-        f.write("        \"name\": \"%s\",\n" % (colset.doorName))
+        f.write("            \"name\": \"%s\",\n" % (colset.doorName))
         
-        f.write("        \"closedPos\":[%s, %s, %s],\n" % (round(obj.location[0],5), round(obj.location[2],5), -1*round(obj.location[1],5)))
+        f.write("            \"closedPos\":[%s, %s, %s],\n" % (round(obj.location[0],5), round(obj.location[2],5), -1*round(obj.location[1],5)))
 
         if openPos != None:
-            f.write("        \"openPos\":[%s, %s, %s],\n" % (round(openPos.location[0],5), round(openPos.location[2],5), -1*round(openPos.location[1],5)))
+            f.write("            \"openPos\":[%s, %s, %s],\n" % (round(openPos.location[0],5), round(openPos.location[2],5), -1*round(openPos.location[1],5)))
         else:
-            f.write("        \"openPos\": \"was not defined for %s\",\n" % (obj.name))
+            f.write("            \"openPos\": \"was not defined for %s\",\n" % (obj.name))
         
-        f.write("        \"width\": %s, \n" % (round(obj.dimensions[0],5)))
+        f.write("            \"width\": %s, \n" % (round(obj.dimensions[0],5)))
         
-        f.write("        \"height\": %s" % (round(obj.dimensions[2],5)))
+        f.write("            \"height\": %s" % (round(obj.dimensions[2],5)))
         
         if colset.closedByDefault:
-            f.write(",\n        \"closedByDefault\": true")
+            f.write(",\n            \"closedByDefault\": true")
         
         if colset.closeOnMovement:
-            f.write(",\n        \"closeOnMovement\": true")
+            f.write(",\n            \"closeOnMovement\": true")
             
         if colset.activateOnSeated:
-            f.write(",\n        \"activateOnSeated\": true")
+            f.write(",\n            \"activateOnSeated\": true")
             
         if colset.ignoresClicks:
-            f.write(",\n        \"ignoresClicks\": true")
+            f.write(",\n            \"ignoresClicks\": true")
             
-        f.write("\n    }")
+        f.write("\n        }")
 
 class SCENE_OT_MarkAsCollision(bpy.types.Operator):
     bl_idname = "object.mark_as_collision"
