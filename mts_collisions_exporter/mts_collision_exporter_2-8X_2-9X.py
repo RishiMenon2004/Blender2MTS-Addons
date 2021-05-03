@@ -21,7 +21,7 @@ bl_info = {
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
     "version": (1, 8),
     "blender": (2, 90, 0),
-    "location": "Object —> MTS/IV Collision Properties",
+    "location": "Object Properties —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
     "category": "MTS"
 }

@@ -21,7 +21,7 @@ bl_info = {
     "author": "Turbo Defender",
     "version": (1, 0),
     "blender": (2, 90, 0),
-    "location": "Object —> MTS/IV Seat-Inator",
+    "location": "Object Properties –> MTS/IV Seat Properties",
     "description": "Exports Blender markers as MTS/IV part positions for seats",
     "category": "MTS"
 }
