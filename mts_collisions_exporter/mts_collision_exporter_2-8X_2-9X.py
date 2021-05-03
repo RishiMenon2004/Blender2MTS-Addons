@@ -1,18 +1,35 @@
+# ##### BEGIN GPL LICENSE BLOCK #####
+#   Copyright (C) 2021  Turbo Defender
+#   
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#   
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#    
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, contact Turbo Defender at turbodefender82004@gmail.com
+# ##### END GPL LICENSE BLOCK #####
+
+#Addon properties
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (1, 7),
+    "version": (1, 8),
     "blender": (2, 90, 0),
     "location": "Object —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
-    "category": "Object"
+    "category": "MTS"
 }
 
+#Import blender modules
 import bpy
-import math
-import numpy as NP
-import json
-from bpy_extras.io_utils import (ExportHelper, ImportHelper) 
+from bpy.types import Panel
+from bpy_extras.io_utils import (ExportHelper, ImportHelper)
 from bpy.props import (
         BoolProperty,
         FloatProperty,
@@ -20,11 +37,18 @@ from bpy.props import (
         EnumProperty,
         PointerProperty,
         )
+
+#Import python bundled modules
+import math
+import numpy as NP
+import json
         
-#importer
-class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
-    bl_idname = "object.import_collision_boxes"
+#Operator: Importer
+class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
+    #Class options
+    bl_idname = "mts.import_collision_boxes"
     bl_label = "Import Collisions"
+    bl_description = "Import collision and door boxes from a JSON file"
     
     filename_ext = ".json"
     filter_glob: StringProperty(
@@ -134,10 +158,12 @@ class SCENE_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
         self.report({'OPERATOR'}, "Import Finished")
         return {'FINISHED'}
 
-#exporter      
-class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
-    bl_idname = "object.export_collision_boxes"
+#Operator: Exporter      
+class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
+    #Class options
+    bl_idname = "mts.export_collision_boxes"
     bl_label = "Export Collisions"
+    bl_description = "Export collision and door boxes as a JSON snippet"
     
     filename_ext = ".json"
 
@@ -313,10 +339,13 @@ class SCENE_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             
         f.write("\n        }")
 
-class SCENE_OT_MarkAsCollision(bpy.types.Operator):
-    bl_idname = "object.mark_as_collision"
+#Operator: Mark selelcted objects as collisions/doors
+class MTS_OT_MarkAsCollision(bpy.types.Operator):
+    #Class options
+    bl_idname = "mts.mark_as_collision"
     bl_label = "(MTS/IV) Mark all selected as collison"
     bl_property = "type_search"
+    bl_description = "Enable the collsion or door property for the selected objects"
         
     @classmethod
     def poll(cls, context):
@@ -342,20 +371,21 @@ class SCENE_OT_MarkAsCollision(bpy.types.Operator):
     def invoke(self, context, event):
         context.window_manager.invoke_search_popup(self)
         return {'RUNNING_MODAL'}
-    
-def update_open_pos(self, context):
-    obj = context.object
-    colset = obj.mts_collision_settings
-    target_obj = colset.openPos
-    target_colset = target_obj.mts_collision_settings
-    
-    target_colset['isCollision'] = False
-    target_colset['isDoor'] = False
-        
-    return
-        
+
+#Create the custom properties for collision and door boxes
 class CollisionSettings(bpy.types.PropertyGroup):
+
+    def update_open_pos(self, context):
+        obj = context.object
+        colset = obj.mts_collision_settings
+        target_obj = colset.openPos
+        target_colset = target_obj.mts_collision_settings
     
+        target_colset['isCollision'] = False
+        target_colset['isDoor'] = False
+        
+        return None
+
     #collisions
     isCollision: BoolProperty(
         name = "Is Collision",
@@ -430,76 +460,139 @@ class CollisionSettings(bpy.types.PropertyGroup):
         update = update_open_pos
         )
 
-#Draw the parent panel for the collision boxes and door hitboxes
-class OBJECT_PT_MTSCollisionBasePanel(bpy.types.Panel):
+#Panel: Draw the parent panel for the collision boxes and door hitboxes
+class MTS_PT_MTSCollisionBasePanel(Panel):
+    #Class options
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "object"
     bl_label = "MTS/IV Collision Properties"
-    bl_idname = "OBJECT_PT_mtscollision"
+    bl_idname = "MTS_PT_mtscollision"
     
+    #Draw function
     def draw(self, context):
+        #create a layout
         layout = self.layout
         row = layout.row()
-        row.operator("object.export_collision_boxes")
+        #export operator button
+        row.operator(icon='EXPORT', operator="mts.export_collision_boxes")
+        #import operator button
+        row.operator(icon='IMPORT', operator="mts.import_collision_boxes")
         row = layout.row()
+        #warning text
         row.label(icon='ERROR', text="Note: openPos boxes should not use the Collision or Door property else it'll mess you up")
 
-#Draw the collision box panel
-class OBJECT_PT_MTSCollisionPanel(bpy.types.Panel):
+#Panel: Draw the collision box panel
+class MTS_PT_MTSCollisionPanel(Panel):
+    #Class options
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "object"
-    bl_parent_id = "OBJECT_PT_mtscollision"
+    bl_parent_id = "MTS_PT_mtscollision"
     bl_label = "Collision Box Properties"
     
+    #Draw function
     def draw(self, context):
+        #create a layout
         layout = self.layout
+        #get the current active object
         obj = context.object
+        #get it's custom properties
         collisionsettings = obj.mts_collision_settings
         
+        #collsion property
         row = layout.row()
         row.prop(collisionsettings, "isCollision", text = "Collision")
+        #check if the collision property is enabled
         if collisionsettings.isCollision == True:
+            #interior collision
             row.prop(collisionsettings, "isInterior", text = "Interior Collision") 
             row = layout.row()
+            #floating collision
             row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids")
+            #armour thickness
             row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
             row = layout.row()
+            #width of subdivision, to split a big box into multiple ones
             row.prop(collisionsettings, "subdivideWidth", text = "Subdivision Width")
+            #height of the subdivision, to split a big box into multiple ones
             row.prop(collisionsettings, "subdivideHeight", text = "Subdivision Height")
 
-#Draw the door hitbox panel
-class OBJECT_PT_MTSDoorsPanel(bpy.types.Panel):
+#Panel: Draw the door hitbox panel
+class MTS_PT_MTSDoorsPanel(Panel):
+    #Class options
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "object"
-    bl_parent_id = "OBJECT_PT_mtscollision"
+    bl_parent_id = "MTS_PT_mtscollision"
     bl_label = "Door Collision Properties"
     
+    #Draw function
     def draw(self, context):
+        #create a layout
         layout = self.layout
+        #get the current active object
         obj = context.object
+        #get it's custom properties
         collisionsettings = obj.mts_collision_settings
         
         row = layout.row()
-        row.prop(collisionsettings, "doorName", text = "Door Name")
-        row = layout.row()
-        row.prop(collisionsettings, "isDoor", text = "Door")
+        #check if the door property is enabled if so show the name property
         if collisionsettings.isDoor == True:
+            row.prop(collisionsettings, "doorName", text = "Door Name")
+            row = layout.row()
+        #door property
+        row.prop(collisionsettings, "isDoor", text = "Door")
+        #check if the door property is enabled
+        if collisionsettings.isDoor == True:
+            #add the rest of the properties 
+            #closed by default
             row.prop(collisionsettings, "closedByDefault", text = "Closed by Default") 
             row = layout.row()
+            #close on movement
             row.prop(collisionsettings, "closeOnMovement", text = "Close on Movement")
+            #close/open when sitting/dismounting
             row.prop(collisionsettings, "activateOnSeated", text = "Activate When Seated")
             row = layout.row()
+            #ignores clicks
             row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
+            #pointer to the open pos object of the door
             row.prop(collisionsettings, "openPos", text = "Open Pos Box")
+
+#Panel: Parent for drawing the main MTS/IV tab in the numbers panel
+class MTS_View3D_Parent:
+    #Class options
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "MTS/IV"
     
+#Panel: Draw the collision tools panel in the numbers panel
+class MTS_V3D_CollisionPanel(MTS_View3D_Parent, Panel):
+    #Class options
+    bl_idname = "MTS_PT_V3D_collisionpanel"
+    bl_label = "MTS/IV Collision Tools"
+
+    #Draw function
+    def draw(self, context):
+        #create a layout
+        layout = self.layout
+        row = layout.row()
+        #mark as collision operator button
+        row.operator("mts.mark_as_collision")
+        row = layout.row()
+        #export operator button
+        row.operator(icon="EXPORT", operator="mts.export_collision_boxes")
+        row = layout.row()
+        #import operator button
+        row.operator(icon="IMPORT", operator="mts.import_collision_boxes")
+
+#Create export button for export menu
 def menu_func_export(self, context):
-    self.layout.operator("object.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
-    
+    self.layout.operator("mts.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
+
+#Create import button for import menu
 def menu_func_import(self, context):
-    self.layout.operator("object.import_collision_boxes", text="MTS/IV JSON(.json)")
+    self.layout.operator("mts.import_collision_boxes", text="MTS/IV JSON(.json)")
 
 def rotate(v, axis, center):
     # Takes a vector and a rotation axis, and returns the rotated vector
@@ -517,17 +610,15 @@ def rotate(v, axis, center):
 
     return NP.add(rotatedV, center) # Add the origin back in when we're done
 
-#keymaps list
-addon_keymaps = []
-
 classes = (
-    SCENE_OT_ImportCollisions,
-    SCENE_OT_ExportCollisions,
-    SCENE_OT_MarkAsCollision,
+    MTS_OT_ImportCollisions,
+    MTS_OT_ExportCollisions,
+    MTS_OT_MarkAsCollision,
     CollisionSettings,
-    OBJECT_PT_MTSCollisionBasePanel,
-    OBJECT_PT_MTSCollisionPanel,
-    OBJECT_PT_MTSDoorsPanel
+    MTS_PT_MTSCollisionBasePanel,
+    MTS_PT_MTSCollisionPanel,
+    MTS_PT_MTSDoorsPanel,
+    MTS_V3D_CollisionPanel
 )
         
 def register():
@@ -539,21 +630,14 @@ def register():
     
     #Append the export operator to the export menu
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    #Append the import operator to the import menu
     bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
-    
-    wm = bpy.context.window_manager
-    kc = wm.keyconfigs.addon
-    if kc: 
-        km = kc.keymaps.new(name='Object Mode', space_type='EMPTY')
-        kmi = km.keymap_items.new("object.mark_as_collision", type='D', value='PRESS', ctrl=True, shift=True)
-        addon_keymaps.append((km, kmi))
         
 def unregister():
-    for km,kmi in addon_keymaps:
-        km.keymap_items.remove(kmi)
-    addon_keymaps.clear()
     
+    #Remove the export operator from the export menu
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    #Remove the import operator from the import menu
     bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
     
     from bpy.utils import unregister_class
