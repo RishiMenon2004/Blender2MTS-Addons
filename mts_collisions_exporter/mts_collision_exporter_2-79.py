@@ -530,6 +530,34 @@ class MTS_PT_MTSCollisionBasePanel(Panel):
             #pointer to the open pos object of the door
             row.prop(collisionsettings, "openPos", text = "Open Pos Box")
 
+#Panel: Parent for drawing the main MTS/IV tab in the numbers panel
+class MTS_View3D_Parent:
+    #Class options
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+
+#Panel: Draw the collision tools panel in the numbers panel
+class MTS_V3D_CollisionPanel(MTS_View3D_Parent, Panel):
+    #Class options
+    bl_category = "MTS/IV"
+    bl_context = "objectmode"
+    bl_label = "MTS/IV Collision Tools"
+    bl_idname = "MTS_PT_V3D_collisionpanel"
+
+    #Draw function
+    def draw(self, context):
+        #create a layout
+        layout = self.layout
+        row = layout.row()
+        #mark as collision operator button
+        row.operator("mts.mark_as_collision")
+        row = layout.row()
+        #export operator button
+        row.operator(icon="EXPORT", operator="mts.export_collision_boxes")
+        row = layout.row()
+        #import operator button
+        row.operator(icon="IMPORT", operator="mts.import_collision_boxes")
+
 #Create export button for export menu
 def menu_func_export(self, context):
     self.layout.operator("mts.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
@@ -559,7 +587,8 @@ classes = (
     MTS_OT_ExportCollisions,
     MTS_OT_MarkAsCollision,
     CollisionSettings,
-    MTS_PT_MTSCollisionBasePanel
+    MTS_PT_MTSCollisionBasePanel,
+    MTS_V3D_CollisionPanel,
 )
         
 def register():
