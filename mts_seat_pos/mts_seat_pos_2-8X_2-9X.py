@@ -229,7 +229,11 @@ class MTS_PT_MTSSeatPanel(Panel):
         obj = context.object
         #get it's custom properties
         seatsettings = obj.mts_seat_settings
-
+        
+        row = layout.row()
+        #export operator button
+        row.operator(icon='EXPORT', operator="mts.export_seat_pos")
+        
         row = layout.row()
         #check if the seat property is enabled if so show the name property
         row.prop(seatsettings, "isSeat", text="Is Seat")
@@ -240,9 +244,6 @@ class MTS_PT_MTSSeatPanel(Panel):
             row = layout.row()
             #dismount position
             row.prop(seatsettings, "dismountOffset", text="Dismount Offset")
-            row = layout.row()
-            #export operator button
-            row.operator("mts.export_seat_pos")
 
 #Panel: Parent for drawing the main MTS/IV tab in the numbers panel
 class View3DPanel:
