@@ -1,5 +1,3 @@
-# README AND WIKI UNDERCONTRUCTION FOR NEW ADDON PLEASE BE PATIENT FOR USAGE INSTRUCTIONS
-
 # Blender Addons for version 2.79, 2.8 and above
 ## • Blender2MTS: Collisions Exporter
 ## • Blender2MTS: Seat Tools
