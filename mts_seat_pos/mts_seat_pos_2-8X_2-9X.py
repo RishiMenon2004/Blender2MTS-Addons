@@ -172,6 +172,9 @@ class MTS_OT_DismountPreview(bpy.types.Operator):
                 bpy.data.objects.remove(object=obj, do_unlink=True)
             return {'FINISHED'}
         
+        if event.type in {'MIDDLEMOUSE', 'TRACKPADPAN', 'WHEELUPMOUSE', 'WHEELDOWNMOUSE'}:
+            return {'PASS_THROUGH'}
+        
         return {'RUNNING_MODAL'}
     
     def invoke(self, context, event):
