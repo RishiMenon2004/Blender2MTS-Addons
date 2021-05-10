@@ -284,7 +284,7 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         f.write("\n    ],")
         f.write("\n}")
         
-        self.report({'INFO'}, "Export Complete")
+        self.report({'OPERATOR'}, "Export Complete")
 
         return {'FINISHED'}
             

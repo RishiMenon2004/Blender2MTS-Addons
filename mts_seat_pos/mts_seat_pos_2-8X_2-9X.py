@@ -65,7 +65,7 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
                 self.export_seat(obj, obj.mts_seat_settings, f, context)
         f.write("\n],")
         
-        self.report({'INFO'}, "Export Complete")
+        self.report({'OPERATOR'}, "Export Complete")
 
         return {'FINISHED'}
         
