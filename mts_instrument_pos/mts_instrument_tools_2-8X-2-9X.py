@@ -435,6 +435,10 @@ class MTS_V3D_InstrumentPanel(MTS_View3D_Parent, Panel):
 def menu_func_export(self, context):
     self.layout.operator("mts.export_instruments", text="MTS/IV Instruments (.json)")
 
+#Create import button for import menu
+def menu_func_import(self, context):
+    self.layout.operator("mts.import_instruments", text="MTS/IV Instruments (.json)")
+
 classes = (
      MTS_OT_AddInstrument,
      MTS_OT_ImportCollisions,
@@ -455,8 +459,15 @@ def register():
 
     #Append the export operator to the export menu
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    #Append the import operator to the import menu
+    bpy.types.TOPBAR_MT_file_import.append(menu_func_import)
 
 def unregister():
+
+    #Remove the export operator from the export menu
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    #Remove the import operator from the import menu
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func_import)
 
     from bpy.utils import unregister_class
     for cls in classes:
