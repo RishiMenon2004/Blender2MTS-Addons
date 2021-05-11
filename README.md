@@ -4,8 +4,6 @@
 
 ### Blender addons for 2.79, 2.8 and above to aid with pack development for the popular minecraft mod Immersive Vehicles (Formerly Minecraft Transport Simulator)
 
-### Download the instrument tools zip and install that not the .py file (INSTALL ONLY IN 2.8 AND ABOVE)
-
-### WIKI FOR INSTRUMENT TOOLS SOON
+### WIKI UPDATED. REFER TO WIKI FOR INSTALL INSTRUCTIONS
 
 ### Credits: Turbo Defender | Gyro Hero | Laura Darkez
