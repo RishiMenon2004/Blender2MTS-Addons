@@ -55,7 +55,7 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
         firstEntry = True
         for obj in context.scene.objects:
             if obj.mts_seat_settings.isSeat != False:
-                if obj.mts_seat_settings.dismountPos == None:
+                if obj.mts_seat_settings.dismountOffset == None:
                     self.report({'INFO'}, "dismountPos was not defined for %s" % (obj.name))
                 if firstEntry:
                     firstEntry = False
@@ -71,17 +71,14 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
         
     def export_seat(self, obj, colset, f, context):
 
-        dismountPos = colset.dismountPos
+        dismountOffset = colset.dismountOffset
         isController = colset.isController
         
         f.write("        \"pos\": [%s, %s, %s],\n" % (round(obj.location[0],5), round(obj.location[2],5), -1*round(obj.location[1],5)))
 
         f.write("        \"types\": [\"seat\"],\n")
         
-        if dismountPos != [0.0, 0.0, 0.0]:
-            f.write("        \"dismountPos\":[%s, %s, %s]" % (round(dismountPos[0]+obj.location[0],5), round(dismountPos[2+obj.location[2]],5), -1*round(dismountPos[1]+obj.location[0],5)))
-        else:
-            f.write("        \"dismountPos\": \"was not defined for %s\"" % (obj.name))
+        f.write("        \"dismountPos\":[%s, %s, %s]" % (round(dismountOffset[0]+obj.location[0],5), round(dismountOffset[2]+obj.location[2]],5), -1*round(dismountOffset[1]+obj.location[0],5)))
         
         if isController:
             f.write(",\n        \"isController\": true")
