@@ -78,7 +78,7 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
 
         f.write("        \"types\": [\"seat\"],\n")
         
-        f.write("        \"dismountPos\":[%s, %s, %s]" % (round(dismountOffset[0]+obj.location[0],5), round(dismountOffset[2]+obj.location[2]],5), -1*round(dismountOffset[1]+obj.location[0],5)))
+        f.write("        \"dismountPos\":[%s, %s, %s]" % (round(dismountOffset[0]+obj.location[0],5), round(dismountOffset[2]+obj.location[2],5), -1*round(dismountOffset[1]+obj.location[0],5)))
         
         if isController:
             f.write(",\n        \"isController\": true")
