@@ -122,6 +122,11 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                         clicks = door['ignoresClicks']
                     else:
                         clicks = False
+                        
+                    if 'armorThickness' in door:
+                        armor = door['armorThickness']
+                    else:
+                        armor = False
                     
                     bpy.ops.mesh.primitive_cube_add(radius=2, location=(closedPos[0], -1*closedPos[2], closedPos[1]))
                     closedobj = context.object
@@ -143,6 +148,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     settings.closedByDefault = default
                     settings.activateOnSeated = seated
                     settings.ignoresClicks = clicks
+                    settings.armorThickness = armor
                     settings.openPos = openobj
                     
             if 'collision' not in file or 'doors' not in file:
@@ -333,6 +339,9 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         if colset.ignoresClicks:
             f.write(",\n            \"ignoresClicks\": true")
             
+        if colset.armorThickness != 0:
+            f.write(",\n            \"armorThickness\": %s" % (colset.armorThickness))
+            
         f.write("\n        }")
 
 #Operator: Mark selelcted objects as collisions/doors
@@ -449,7 +458,14 @@ class CollisionSettings(bpy.types.PropertyGroup):
         name = "Ignores User Clicks",
         default = False
         )
-        
+    
+    armorThickness= FloatProperty(
+        name = "Armour Thickness",
+        default = 0.0,
+        min = 0,
+        max = 1000
+        )
+    
     openPos= PointerProperty(
         type = bpy.types.Object,
         name = "Open Position Box",
@@ -527,6 +543,8 @@ class MTS_PT_MTSCollisionBasePanel(Panel):
             row = layout.row()
             #ignores clicks
             row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
+            #armour thickness
+            row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
             #pointer to the open pos object of the door
             row.prop(collisionsettings, "openPos", text = "Open Pos Box")
 
