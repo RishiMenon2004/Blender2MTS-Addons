@@ -148,7 +148,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     settings.closedByDefault = default
                     settings.activateOnSeated = seated
                     settings.ignoresClicks = clicks
-                    settings.armorThickness = armor
+                    settings.doorArmorThickness = armor
                     settings.openPos = openobj
                     
             if 'collision' not in file or 'doors' not in file:
@@ -545,6 +545,7 @@ class MTS_PT_MTSCollisionBasePanel(Panel):
             row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
             #armour thickness
             row.prop(collisionsettings, "doorArmorThickness", text = "Armor Thickness")
+            row = layout.row()
             #pointer to the open pos object of the door
             row.prop(collisionsettings, "openPos", text = "Open Pos Box")
 
