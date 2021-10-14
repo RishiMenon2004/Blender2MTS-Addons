@@ -31,6 +31,7 @@ from bpy.types import Panel
 from bpy_extras.io_utils import ExportHelper
 from bpy.props import (
     BoolProperty,
+    BoolVectorProperty,
     FloatProperty,
     FloatVectorProperty,
     IntProperty,
@@ -71,14 +72,22 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
         
     def export_seat(self, obj, colset, f, context):
 
-        dismountOffset = colset.dismountOffset
+        dismountOffset = colset.dismountOffset.copy()
+        isWorldSpace = colset.isWorldSpace
         isController = colset.isController
+        
+        if(not isWorldSpace[0]):
+            dismountOffset[0] += obj.location[0]
+        if(not isWorldSpace[1]):
+            dismountOffset[1] += obj.location[1]
+        if(not isWorldSpace[2]):
+            dismountOffset[2] += obj.location[2]
         
         f.write("        \"pos\": [%s, %s, %s],\n" % (round(obj.location[0],5), round(obj.location[2],5), -1*round(obj.location[1],5)))
 
         f.write("        \"types\": [\"seat\"],\n")
         
-        f.write("        \"dismountPos\":[%s, %s, %s]" % (round(dismountOffset[0]+obj.location[0],5), round(dismountOffset[2]+obj.location[2],5), -1*round(dismountOffset[1]+obj.location[0],5)))
+        f.write("        \"dismountPos\":[%s, %s, %s]" % (round(dismountOffset[0],5), round(dismountOffset[2],5), -1*round(dismountOffset[1],5)))
         
         if isController:
             f.write(",\n        \"isController\": true")
@@ -154,10 +163,17 @@ class MTS_OT_DismountPreview(bpy.types.Operator):
         #create the preview objects
         for obj in context.selected_objects:
             if obj.mts_seat_settings.isSeat:
-                dismountOffset = obj.mts_seat_settings.dismountOffset
+                dismountOffset = obj.mts_seat_settings.dismountOffset.copy()
+                isWorldSpace = obj.mts_seat_settings.isWorldSpace
                 bpy.ops.object.empty_add(type='ARROWS', location= obj.location)
                 context.object.name = "dismount preview"
                 context.object.show_in_front = True
+                if(isWorldSpace[0]):
+                    dismountOffset[0] -= obj.location[0]
+                if(isWorldSpace[1]):
+                    dismountOffset[1] -= obj.location[1]
+                if(isWorldSpace[2]):
+                    dismountOffset[2] -= obj.location[2]
                 bpy.ops.transform.translate(value=(dismountOffset[0], dismountOffset[1], dismountOffset[2]))
                 bpy.ops.view3d.view_all()
                 self.previewObjs.append(context.object)
@@ -207,6 +223,12 @@ class SeatSettings(bpy.types.PropertyGroup):
         subtype = 'XYZ'
         )
         
+    isWorldSpace: BoolVectorProperty(
+        name = "Is World Space",
+        default = [False, False, False],
+        subtype = 'XYZ'
+    )
+
     isController: BoolProperty(
         name = "Is Controller",
         default = False
@@ -244,6 +266,9 @@ class MTS_PT_MTSSeatPanel(Panel):
             row = layout.row()
             #dismount position
             row.prop(seatsettings, "dismountOffset", text="Dismount Offset")
+            row = layout.row()
+            #use world space
+            row.prop(seatsettings, "isWorldSpace", text="Use World Space")
 
 #Panel: Parent for drawing the main MTS/IV tab in the numbers panel
 class View3DPanel:
