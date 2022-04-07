@@ -343,7 +343,7 @@ class MTS_OT_InstrumentHUDPos(Operator):
                 presets.draw_texture_2d(hud.bindcode, (self.panel_offset, 0), 400, 140)
                 
                 # set properties of the instrument
-                self.gauge_dimensions = 128*self.instSet.scale
+                self.gauge_dimensions = 128 * self.instSet.scale
                 self.gauge_pos = [(self.instSet.hudX - (self.gauge_dimensions/2)) + self.panel_offset, (-self.instSet.hudY - (self.gauge_dimensions/2)) + 140]
                 
                 # for each unselected instrument draw the preview
@@ -351,8 +351,8 @@ class MTS_OT_InstrumentHUDPos(Operator):
                     if obj != context.object and obj.mts_instrument_settings.isInstrument:
                         instSet = obj.mts_instrument_settings
                     
-                        inst_dimension = 128*instSet.scale
-                        inst_pos = [(instSet.hudX - (inst_dimension/2)) + self.panel_offset, (-instSet.hudY - (inst_dimension/2))]
+                        inst_dimension = 128 * instSet.scale
+                        inst_pos = [(instSet.hudX - (inst_dimension/2)) + self.panel_offset, (-instSet.hudY - (inst_dimension/2)) + 140]
                         presets.draw_texture_2d(prev_gauge.bindcode, (inst_pos[0], inst_pos[1]), inst_dimension, inst_dimension)
                 
                 # draw the instrument
