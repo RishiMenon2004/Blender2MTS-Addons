@@ -2,10 +2,10 @@
 bl_info = {
     "name": "MTS/IV Instrument Tools",
     "author": "Turbo Defender",
-    "version": (1, 0),
+    "version": (1, 2),
     "blender": (2, 90, 0),
     "location": "Object Properties –> MTS/IV Instrument Properties",
-    "description": "Various tools for setting up instrumenst/gauges for mts",
+    "description": "Various tools for setting up instruments/gauges for mts",
     "category": "MTS"
 }
 
@@ -188,7 +188,7 @@ class MTS_OT_ExportInstruments(Operator, ExportHelper):
 
         f.write("            \"hudY\": %s,\n" % (instset.hudY))
 
-        f.write("            \"hudScale\": %s" % (instset.scale))
+        f.write("            \"hudScale\": %s" % (round(instset.scale, 2)))
             
         f.write("\n        }")
 
@@ -210,12 +210,10 @@ class MTS_OT_InstrumentHUDPos(Operator):
         
         # get object
         obj = context.object
-        # get instrument settings
-        instSet = obj.mts_instrument_settings
         
         #set the range where the mouse can interact with the instrument
-        range_min = [(instSet.hudX - (64 * instSet.scale)) - 16 + self.panel_offset, (-instSet.hudY - (64 * instSet.scale)) - 16 + 140]
-        range_max = [(instSet.hudX + (64 * instSet.scale)) + 16 + self.panel_offset, (-instSet.hudY + (64 * instSet.scale)) + 16 + 140]
+        range_min = [(self.instSet.hudX - (64 * self.instSet.scale)) - 16 + self.panel_offset, (-self.instSet.hudY - (64 * self.instSet.scale)) - 16 + 140]
+        range_max = [(self.instSet.hudX + (64 * self.instSet.scale)) + 16 + self.panel_offset, (-self.instSet.hudY + (64 * self.instSet.scale)) + 16 + 140]
 
         # if mouse moved
         if event.type == 'MOUSEMOVE' or event.type == 'INBETWEEN_MOUSEMOVE':
@@ -226,8 +224,8 @@ class MTS_OT_InstrumentHUDPos(Operator):
             # if mouse down and in range then move the instrument by the mouse offset
             if event.value == 'PRESS':
                 if range_min[0] < event.mouse_region_x < range_max[0] and range_min[1] < event.mouse_region_y < range_max[1]:
-                    instSet.hudX += self.mouse_offset[0]
-                    instSet.hudY -= self.mouse_offset[1]
+                    self.instSet.hudX += self.mouse_offset[0]
+                    self.instSet.hudY -= self.mouse_offset[1]
         
             return {'RUNNING_MODAL'}
 
@@ -241,44 +239,53 @@ class MTS_OT_InstrumentHUDPos(Operator):
         # move instrument left
         elif event.type == 'LEFT_ARROW' and event.value == 'PRESS':
             if event.shift:
-                instSet.hudX -= 1
+                self.instSet.hudX -= 1
             else:
-                instSet.hudX -= 10
+                self.instSet.hudX -= 10
             
             return {'RUNNING_MODAL'}
         
         # move instrument right
         elif event.type == 'RIGHT_ARROW' and event.value == 'PRESS':
             if event.shift:
-                instSet.hudX += 1
+                self.instSet.hudX += 1
             else:
-                instSet.hudX += 10
+                self.instSet.hudX += 10
             
             return {'RUNNING_MODAL'}
             
         # move instrument up
         elif event.type == 'UP_ARROW' and event.value == 'PRESS':
             if event.shift:
-                instSet.hudY -= 1
+                self.instSet.hudY -= 1
             else:
-                instSet.hudY -= 10
+                self.instSet.hudY -= 10
             
             return {'RUNNING_MODAL'}
             
         # move instrument down
         elif event.type == 'DOWN_ARROW' and event.value == 'PRESS':
             if event.shift:
-                instSet.hudY += 1
+                self.instSet.hudY += 1
             else:
-                instSet.hudY += 10
+                self.instSet.hudY += 10
 
             return {'RUNNING_MODAL'}
         
         # confirm changes and close the operator
-        elif event.type in {'SPACE', 'ESC'}:
+        elif event.type in {'SPACE', 'RET'}:
             bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
             
             return {'FINISHED'}
+        
+        # discard changes and close the operator
+        elif event.type in {'ESC'}:
+            self.instSet.hudX = self.uHudX
+            self.instSet.hudY = self.uHudY
+            
+            bpy.types.SpaceView3D.draw_handler_remove(self._handle, 'WINDOW')
+            
+            return {'CANCELLED'}
         
         return {'RUNNING_MODAL'}
 
@@ -288,7 +295,11 @@ class MTS_OT_InstrumentHUDPos(Operator):
         if context.area.type == 'VIEW_3D':
             self.mouse_pos = [event.mouse_region_x, event.mouse_region_y]
             
-            instSet = context.object.mts_instrument_settings
+            self.instSet = context.object.mts_instrument_settings
+            
+            # save initial values
+            self.uHudX = self.instSet.hudX
+            self.uHudY = self.instSet.hudY
             
             self.mouse_offset = [0, 0]
             
@@ -304,9 +315,9 @@ class MTS_OT_InstrumentHUDPos(Operator):
                 previewdir = os.path.join(dirname, "images/gauge_preview.png")
                 
                 # dev paths
-                # gaugedir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/generic_gauge.png")
-                # huddir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/hud.png")
-                # previewdir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/gauge_preview.png")
+                gaugedir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/generic_gauge.png")
+                huddir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/hud.png")
+                previewdir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/gauge_preview.png")
                 
                 # load if they exist
                 try:
@@ -332,8 +343,8 @@ class MTS_OT_InstrumentHUDPos(Operator):
                 presets.draw_texture_2d(hud.bindcode, (self.panel_offset, 0), 400, 140)
                 
                 # set properties of the instrument
-                self.gauge_dimensions = 128*instSet.scale
-                self.gauge_pos = [(instSet.hudX - (self.gauge_dimensions/2))+self.panel_offset, (-instSet.hudY - (self.gauge_dimensions/2)) + 140]
+                self.gauge_dimensions = 128*self.instSet.scale
+                self.gauge_pos = [(self.instSet.hudX - (self.gauge_dimensions/2))+self.panel_offset, (-self.instSet.hudY - (self.gauge_dimensions/2)) + 140]
                 
                 # for each unselected instrument draw the preview
                 for obj in context.scene.objects:
@@ -355,9 +366,9 @@ class MTS_OT_InstrumentHUDPos(Operator):
                 blf.shadow_offset(font_id, 1, -1)
                 blf.position(font_id, 20, 40, 0)
                 blf.size(font_id, 20, 72)
-                blf.draw(font_id, "X: {}".format(instSet.hudX))
+                blf.draw(font_id, "X: {}".format(self.instSet.hudX))
                 blf.position(font_id, 20, 20, 0)
-                blf.draw(font_id, "Y: {}".format(instSet.hudY))
+                blf.draw(font_id, "Y: {}".format(self.instSet.hudY))
             # the arguments we pass the the callback
             args = (self, context)
             
