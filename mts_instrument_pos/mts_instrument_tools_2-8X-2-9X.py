@@ -315,9 +315,9 @@ class MTS_OT_InstrumentHUDPos(Operator):
                 previewdir = os.path.join(dirname, "images/gauge_preview.png")
                 
                 # dev paths
-                gaugedir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/generic_gauge.png")
-                huddir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/hud.png")
-                previewdir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/gauge_preview.png")
+                # gaugedir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/generic_gauge.png")
+                # huddir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/hud.png")
+                # previewdir = os.path.join("C:/Users/rishi/Documents/Rishi/GitHub/Blender2MTS-Addons/mts_instrument_pos/images/gauge_preview.png")
                 
                 # load if they exist
                 try:
