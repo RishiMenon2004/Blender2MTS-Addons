@@ -162,7 +162,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     bpy.ops.mts.add_collision_group()
                     sceneCollisionGroups = context.scene.mts_collision_groups[-1]
                     sceneCollisionGroups.isInterior = collisionGroup['isInterior'] if 'isInterior' in collisionGroup else False
-                    sceneCollisionGroups.health = collisionGroup['health']
+                    sceneCollisionGroups.health = collisionGroup['health'] if 'health' in collisionGroup else 0
                     sceneCollisionGroups.applyAfter = collisionGroup['applyAfter'] if 'applyAfter' in collisionGroup else ""
                     collisions = collisionGroup['collisions']
                 
