@@ -177,7 +177,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                         
                         if 'variableType' in collision:
                             settings.variableName = collision['variableName']
-                            settings.variableValue = collision['variableValue']
+                            settings.variableValue = collision['variableValue'] if 'variableValue' in collision else 0
                             settings.variableType = collision['variableType']
                         
                         if 'collidesWithLiquids' in collision:
