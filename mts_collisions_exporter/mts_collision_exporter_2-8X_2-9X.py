@@ -93,7 +93,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     else:
                         armor = False
                         
-                    bpy.ops.mesh.primitive_cube_add(size=2, location=(pos[0], -1*pos[2], pos[1]), scale=(width, width, height))
+                    bpy.ops.mesh.primitive_cube_add(size=1, location=(pos[0], -1*pos[2], pos[1]), scale=(width, width, height))
                     obj = context.object
                     settings = obj.mts_collision_settings
                     settings.isCollision = True
@@ -258,16 +258,16 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                                 # Check if we need to rotate the positions
                                 pos = [x,y,z]
                                 if rot.count(0) == 3: # No rotation
-                                    self.export_collision_box(pos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
+                                    self.export_collision_box(obj.name, pos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
                                 else:
                                     newPos = rotate(pos, rot, origin)
-                                    self.export_collision_box(newPos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
+                                    self.export_collision_box(obj.name, newPos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
 
 
                 else:
                     if not(firstEntry):
                         f.write(",\n        {\n")
-                    self.export_collision_box(obj.location, obj.dimensions, obj.mts_collision_settings, f, context)
+                    self.export_collision_box(obj.name, obj.location, obj.dimensions, obj.mts_collision_settings, f, context)
 
                 if firstEntry:
                     firstEntry = False
@@ -294,9 +294,11 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
 
         return {'FINISHED'}
             
-    def export_collision_box(self, location, dimensions, colset, f, context):
+    def export_collision_box(self, name, location, dimensions, colset, f, context):
         
-        f.write("            \"pos\":[%s, %s, %s],\n" % (round(location[0],5), round(location[2],5), -1*round(location[1],5)))
+        f.write("            \"name\": \"%s\",\n" % name)
+        
+        f.write("            \"pos\": [%s, %s, %s],\n" % (round(location[0],5), round(location[2],5), -1*round(location[1],5)))
         
         f.write("            \"width\": %s, \n" % (round(dimensions[0],5)))
         
@@ -380,6 +382,20 @@ class MTS_OT_MarkAsCollision(bpy.types.Operator):
     def invoke(self, context, event):
         context.window_manager.invoke_search_popup(self)
         return {'RUNNING_MODAL'}
+
+class MTS_OT_MarkAsInterior(bpy.types.Operator):
+    bl_idname = "mts.mark_as_interior"
+    bl_label = "(MTS/IV) Mark all selected as interior"
+    bl_description = "Enable the interior property for the selected objects"
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object is not None
+    
+    def execute(self, context):
+        for obj in context.selected_objects:
+            obj.mts_collision_settings['isInterior'] = True
+        return {'FINISHED'}
 
 #Create the custom properties for collision and door boxes
 class CollisionSettings(bpy.types.PropertyGroup):
@@ -604,6 +620,9 @@ class MTS_V3D_CollisionPanel(MTS_View3D_Parent, Panel):
         row = layout.row()
         #import operator button
         row.operator(icon="IMPORT", operator="mts.import_collision_boxes")
+        row = layout.row()
+        #interior collision operator button
+        row.operator(operator="mts.mark_as_interior")
 
 #Create export button for export menu
 def menu_func_export(self, context):
@@ -633,6 +652,7 @@ classes = (
     MTS_OT_ImportCollisions,
     MTS_OT_ExportCollisions,
     MTS_OT_MarkAsCollision,
+    MTS_OT_MarkAsInterior,
     CollisionSettings,
     MTS_PT_MTSCollisionBasePanel,
     MTS_PT_MTSCollisionPanel,
