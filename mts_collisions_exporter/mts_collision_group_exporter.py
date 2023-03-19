@@ -19,7 +19,7 @@
 bl_info = {
     "name": "MTS/IV Collision Group Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (2, 0),
+    "version": (2, 5),
     "blender": (2, 90, 0),
     "location": "Object Properties —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
@@ -160,10 +160,11 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                 
                 for collisionGroup in collisionGroups:
                     bpy.ops.mts.add_collision_group()
-                    sceneCollisionGroups = context.scene.mts_collision_groups[-1]
-                    sceneCollisionGroups.isInterior = collisionGroup['isInterior'] if 'isInterior' in collisionGroup else False
-                    sceneCollisionGroups.health = collisionGroup['health'] if 'health' in collisionGroup else 0
-                    sceneCollisionGroups.applyAfter = collisionGroup['applyAfter'] if 'applyAfter' in collisionGroup else ""
+                    newCollisionGroup = context.scene.mts_collision_groups[-1]
+                    newCollisionGroup.isInterior = collisionGroup['isInterior'] if 'isInterior' in collisionGroup else False
+                    newCollisionGroup.isForBullet = collisionGroup['isForBullet'] if 'isForBullet' in collisionGroup else False
+                    newCollisionGroup.health = collisionGroup['health'] if 'health' in collisionGroup else 0
+                    newCollisionGroup.applyAfter = collisionGroup['applyAfter'] if 'applyAfter' in collisionGroup else ""
                     collisions = collisionGroup['collisions']
                 
                     for collision in collisions:
@@ -183,7 +184,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                         if 'collidesWithLiquids' in collision:
                             settings.collidesWithLiquids = collision['collidesWithLiquids']
                         else:
-                            collidesWithLiquids = False
+                            settings.collidesWithLiquids = False
                             
                         if 'armorThickness' in collision:
                             settings.armorThickness = collision['armorThickness']
@@ -255,6 +256,9 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             
             if collision_group.isInterior:
                 f.write("\t\t\t\"isInterior\": true,\n")
+                
+            if collision_group.isForBullets:
+                f.write("\t\t\t\"isForBullets\": true,\n")
             
             f.write("\t\t\t\"health\": {health},\n".format(health=collision_group.health))
             
@@ -380,8 +384,14 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         if colset.collidesWithLiquids:
             f.write(",\n\t\t\t\t\t\"collidesWithLiquids\": true")
         
+        if colset.damageMultiplier != 1.0:
+            f.write(",\n\t\t\t\t\t\"damageMultiplier\": {}".format(colset.damageMultiplier))
+            
         if colset.armorThickness != 0:
             f.write(",\n\t\t\t\t\t\"armorThickness\": {}".format(colset.armorThickness))
+        
+        if colset.heatArmorThickness != 0:
+            f.write(",\n\t\t\t\t\t\"heatArmorThickness\": {}".format(colset.heatArmorThickness))
             
         if colset.variableName != "" and colset.variableType != 0:
             f.write(",\n\t\t\t\t\t\"variableName\": \"{}\",".format(colset.variableName))
@@ -539,27 +549,27 @@ class CollisionBoxItem(bpy.types.PropertyGroup):
     )
         
     collidesWithLiquids: BoolProperty(
-        name = "Floats on Liquids",
+        name = "Collides With Liquids",
         default = False
-    )
-        
-    subdivideWidth: FloatProperty(
-        name = "Subdivision Width",
-        default = 0.0,
-        min = 0,
-        max = 1000
-    )
-        
-    subdivideHeight: FloatProperty(
-        name = "Subdivision Height",
-        default = 0.0,
-        min = 0,
-        max = 1000
     )
     
     armorThickness: FloatProperty(
         name = "Armour Thickness",
         default = 0.0,
+        min = 0,
+        max = 1000
+    )
+    
+    heatArmorThickness: FloatProperty(
+        name = "Heat Armour Thickness",
+        default = 0.0,
+        min = 0,
+        max = 1000
+    )
+    
+    damageMultiplier: FloatProperty(
+        name = "Damage Multiplier",
+        default = 1.0,
         min = 0,
         max = 1000
     )
@@ -584,6 +594,20 @@ class CollisionBoxItem(bpy.types.PropertyGroup):
             ("button",      "Button",       "Clicking this box will set the variable to the value. When the player lets go of the mouse button, it will be set back to 0")
         ]
     )
+        
+    subdivideWidth: FloatProperty(
+        name = "Subdivision Width",
+        default = 0.0,
+        min = 0,
+        max = 1000
+    )
+        
+    subdivideHeight: FloatProperty(
+        name = "Subdivision Height",
+        default = 0.0,
+        min = 0,
+        max = 1000
+    )
 
 #PropertyGroup: Pointer Property of Type Collision Box 
 class CollisionBoxPointer(bpy.types.PropertyGroup):
@@ -602,6 +626,11 @@ class CollisionGroupItem(bpy.types.PropertyGroup):
     
     isInterior: BoolProperty(
         name = "Is Interior",
+        default = False
+    )
+    
+    isForBullets : BoolProperty(
+        name = "Is For Bullets",
         default = False
     )
     
@@ -676,7 +705,7 @@ class MTS_PT_MTSCollisionGroupPanel(Panel):
         column.operator("mts.add_collision_group", icon='ADD', text="")
         column.operator("mts.remove_collision_group", icon='REMOVE', text="")
         
-        if len(context.scene.mts_collision_groups) >= 0 and context.scene.mts_collision_groups:
+        if context.scene.mts_collision_groups and len(context.scene.mts_collision_groups) >= 0:
             layout.separator()
             
             row = layout.row()
@@ -686,16 +715,17 @@ class MTS_PT_MTSCollisionGroupPanel(Panel):
             
             row = box.row()
             activeItem = context.scene.mts_collision_groups[context.scene.mts_collision_groups_index]
-            row.label(text="Name:")
-            row.prop(activeItem, "name", icon="PACKAGE", text="")
+            row.prop(activeItem, "name", icon="PACKAGE", text="Name")
             
             row = box.row()
             row.prop(activeItem, "isInterior", icon="MOD_WIREFRAME")
-            row.prop(activeItem, "health", slider=True)
+            row.prop(activeItem, "isForBullets", icon="STYLUS_PRESSURE")
             
             row = box.row()
-            row.label(text="Apply After:")
-            row.prop(activeItem, "applyAfter", text="", icon="LIBRARY_DATA_INDIRECT")
+            row.prop(activeItem, "health", slider=True, icon="ADD")
+            
+            row = box.row()
+            row.prop(activeItem, "applyAfter", text="Apply After", icon="LIBRARY_DATA_INDIRECT")
             
             layout.separator()
             
@@ -746,7 +776,7 @@ class MTS_PT_MTSCollisionPanel(Panel):
         row.label(text="Assigned to: {}".format(context.scene.mts_collision_groups[collisionsettings.assignedCollisionGroupIndex].name if collisionsettings.assignedCollisionGroupIndex >= 0 else "None"))
         
         #assign/remove object from collision group
-        row = layout.row()
+        row = layout.row(align=True)
         row.operator("mts.assign_collision_to_group", text="Assign")
         row.operator("mts.remove_collision_from_group", text="Remove")
         
@@ -760,19 +790,29 @@ class MTS_PT_MTSCollisionPanel(Panel):
         
         row = box.row()
         row.prop(collisionsettings, "collidesWithLiquids", icon="FORCE_FORCE")
+        
+        row = box.row()
         row.prop(collisionsettings, "armorThickness")
+        row.prop(collisionsettings, "heatArmorThickness")
+        
+        box.separator()
+        
+        
+        variableRow1 = box.row()
+        column = variableRow1.column()
+        column.label(text="Variable Name:")
+        column.prop(collisionsettings, "variableName", text="", icon="DRIVER_TRANSFORM")
+        column = variableRow1.column()
+        column.label(text="Variable Type:")
+        column.prop(collisionsettings, "variableType", text="")
+        
+        variableRow2 = box.row()
+        variableRow2.prop(collisionsettings, "variableValue")
+        
+        box.separator()
         
         row = box.row()
-        row.label(text="Variable Name:")
-        row.prop(collisionsettings, "variableName", text="", icon="DRIVER_TRANSFORM")
-        
-        row = box.row()
-        row.prop(collisionsettings, "variableValue")
-        
-        row = box.row()
-        row.label(text="Variable Type:")
-        row.prop(collisionsettings, "variableType", text="")
-        
+        row.label(text="Collision Box Subdivision")
         row = box.row()
         row.prop(collisionsettings, "subdivideWidth")
         row.prop(collisionsettings, "subdivideHeight")
