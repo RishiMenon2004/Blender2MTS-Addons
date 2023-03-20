@@ -518,23 +518,6 @@ class MTS_OT_DeleteCollisionFromGroup(bpy.types.Operator):
         
         return {'FINISHED'}
 
-# #Operator: Mark selected objects as collisions/doors
-# class MTS_OT_AssignAllToGroup(bpy.types.Operator):
-#     #Class options
-#     bl_idname = "mts.assign_all_to_group"
-#     bl_label = "(MTS/IV) Assign All Selected Objects to the Active Collision Group"
-#     bl_description = "A"
-        
-#     @classmethod
-#     def poll(cls, context):
-#         return len(context.selected_objects) > 0
-    
-#     def execute(self, context):
-#         for obj in context.selected_objects:
-#             bpy.context.view_layer.objects.active = obj
-#             bpy.ops.mts.assign_collision_to_group()
-#         return {'FINISHED'}
-
 #PropertyGroup: Collision Box
 class CollisionBoxItem(bpy.types.PropertyGroup):
     
@@ -859,11 +842,11 @@ class MTS_V3D_CollisionPanel(MTS_View3D_Parent, Panel):
 
 #Create export button for export menu
 def menu_func_export(self, context):
-    self.layout.operator("mts.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
+    self.layout.operator("mts.export_collision_boxes", text="MTS/IV Collision Groups (.json)")
 
 #Create import button for import menu
 def menu_func_import(self, context):
-    self.layout.operator("mts.import_collision_boxes", text="MTS/IV JSON(.json)")
+    self.layout.operator("mts.import_collision_boxes", text="MTS/IV Collision Groups (.json)")
     
 
 def rotate(v, axis, center):
