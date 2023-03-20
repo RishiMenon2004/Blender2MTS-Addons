@@ -661,7 +661,7 @@ class MTS_UL_CollisionGroupsList(UIList):
     bl_idname = "MTS_UL_collisiongroupslist"
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
-        custom_icon = 'PACKAGE'
+        custom_icon = 'OUTLINER_COLLECTION'
         
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             if index == context.scene.mts_collision_groups_index:
@@ -698,24 +698,26 @@ class MTS_PT_MTSCollisionGroupPanel(Panel):
     def draw(self, context):
         layout = self.layout
         
-        row = layout.row()
-        row.template_list("MTS_UL_collisiongroupslist", "MTS_Collision_Groups", context.scene, "mts_collision_groups", context.scene, "mts_collision_groups_index")
+        row = layout.row(align=True)
+        column = row.column(align=True)
+        column.template_list("MTS_UL_collisiongroupslist", "MTS_Collision_Groups", context.scene, "mts_collision_groups", context.scene, "mts_collision_groups_index")
+        if context.scene.mts_collision_groups and len(context.scene.mts_collision_groups) >= 0:
+            activeItem = context.scene.mts_collision_groups[context.scene.mts_collision_groups_index]
+            column.prop(activeItem, "name", icon="OUTLINER_COLLECTION", text="")
         
         column = row.column(align=True)
         column.operator("mts.add_collision_group", icon='ADD', text="")
         column.operator("mts.remove_collision_group", icon='REMOVE', text="")
         
         if context.scene.mts_collision_groups and len(context.scene.mts_collision_groups) >= 0:
+            activeItem = context.scene.mts_collision_groups[context.scene.mts_collision_groups_index]
+
             layout.separator()
             
             row = layout.row()
             row.label(text="Collision Group properties:")
             
             box = layout.box()
-            
-            row = box.row()
-            activeItem = context.scene.mts_collision_groups[context.scene.mts_collision_groups_index]
-            row.prop(activeItem, "name", icon="PACKAGE", text="Name")
             
             row = box.row()
             row.prop(activeItem, "isInterior", icon="MOD_WIREFRAME")
@@ -764,16 +766,26 @@ class MTS_PT_MTSCollisionPanel(Panel):
         row.label(text="Collision Groups in Project:")
         
         #UIList of collision groups in project
-        row = layout.row()
-        row.template_list("MTS_UL_collisiongroupslist", "MTS_Collision_Groups", context.scene, "mts_collision_groups", context.scene, "mts_collision_groups_index")
+        row = layout.row(align=True)
+        column = row.column(align=True)
+        column.template_list("MTS_UL_collisiongroupslist", "MTS_Collision_Groups", context.scene, "mts_collision_groups", context.scene, "mts_collision_groups_index")
+        if context.scene.mts_collision_groups and len(context.scene.mts_collision_groups) >= 0:
+            activeItem = context.scene.mts_collision_groups[context.scene.mts_collision_groups_index]
+            column.prop(activeItem, "name", icon="OUTLINER_COLLECTION", text="")
         
         #+/- collision group buttons
         column = row.column(align=True)
         column.operator("mts.add_collision_group", icon='ADD', text="")
         column.operator("mts.remove_collision_group", icon='REMOVE', text="")
         
-        row = layout.row()
-        row.label(text="Assigned to: {}".format(context.scene.mts_collision_groups[collisionsettings.assignedCollisionGroupIndex].name if collisionsettings.assignedCollisionGroupIndex >= 0 else "None"))
+        layout.separator()
+        
+        row = layout.row(align=True)
+        column = row.column()
+        if collisionsettings.assignedCollisionGroupIndex >= 0:
+            column.prop(context.scene.mts_collision_groups[collisionsettings.assignedCollisionGroupIndex], "name", icon="OUTLINER_COLLECTION", text="Assigned To")
+        else:
+            column.label(text="Assigned To:")
         
         #assign/remove object from collision group
         row = layout.row(align=True)
@@ -784,7 +796,7 @@ class MTS_PT_MTSCollisionPanel(Panel):
         
         #collision properties
         row = layout.row()
-        row.label(text="Collision Box Properties:")
+        row.label(text="Collision Box Properties")
         
         box = layout.box()
         
@@ -795,13 +807,17 @@ class MTS_PT_MTSCollisionPanel(Panel):
         row.prop(collisionsettings, "armorThickness")
         row.prop(collisionsettings, "heatArmorThickness")
         
-        box.separator()
+        layout.separator()
         
+        layout.label(text="Variable Properties")
+        box = layout.box()
         
         variableRow1 = box.row()
+        
         column = variableRow1.column()
         column.label(text="Variable Name:")
         column.prop(collisionsettings, "variableName", text="", icon="DRIVER_TRANSFORM")
+        
         column = variableRow1.column()
         column.label(text="Variable Type:")
         column.prop(collisionsettings, "variableType", text="")
@@ -809,10 +825,10 @@ class MTS_PT_MTSCollisionPanel(Panel):
         variableRow2 = box.row()
         variableRow2.prop(collisionsettings, "variableValue")
         
-        box.separator()
+        layout.separator()
         
-        row = box.row()
-        row.label(text="Collision Box Subdivision")
+        layout.label(text="Subdivision Settings")
+        box = layout.box()
         row = box.row()
         row.prop(collisionsettings, "subdivideWidth")
         row.prop(collisionsettings, "subdivideHeight")
