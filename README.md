@@ -1,18 +1,21 @@
-# Blender Addons for versions 2.79, 2.8+ and 3.0
-Blender addons made for Blender versions 2.79, 2.8+ and 3.X to aid with pack development for the popular minecraft mod Immersive Vehicles (Formerly Minecraft Transport Simulator)
-* [Collisions Exporter](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_collisions_exporter)
-* [Seat Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_seat_pos)
-* [Instrument Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_instrument_pos)
+# Blender2MTS - MTS Helper Addons for Blender
 
-# Installation
-For instructions, refer to the [Wiki](https://github.com/RishiMenon2004/Blender2MTS-Addons/wiki)
+![Blender2MTS Banner](/wiki_images/social_banner.png)
+
+Blender addons to aid with pack development for the popular minecraft mod Immersive Vehicles (Formerly Minecraft Transport Simulator)
+
+* [Collision Groups Export](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_collisions_exporter)
+* [Instrument Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_instrument_pos)
+* NOT UPDATED [Seat Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_seat_pos)
+
+## Installation
+
+* [Collision Groups Export](https://github.com/RishiMenon2004/Blender2MTS-Addons/wiki/Collisions-Exporter-Addon)
+* [Instrument Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/wiki/Instrument-Tools-Addon)
+* [Seat Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/wiki/Seat-Tools-Addon)
 
 ## Credits
+
 * Turbo Defender
 * Gyro Hero
 * Laura Darkez
-
-<br /><br />
-<img src="https://download.blender.org/branding/community/blender_community_badge_white.png" width="50">
-
-A Blender Community Project
