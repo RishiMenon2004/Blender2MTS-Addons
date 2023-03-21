@@ -415,7 +415,7 @@ class MTS_OT_AddGroupToList(bpy.types.Operator):
 #LayoutOperator: Delete Active Collision Group
 class MTS_OT_DeleteGroupFromList(bpy.types.Operator):
     bl_idname = "mts.remove_collision_group"
-    bl_label = "(MTS/IV) Add Collision Group From Project"
+    bl_label = "(MTS/IV) Remove Collision Group From Project"
     bl_description = "Delete the active collision group"
     
     @classmethod
