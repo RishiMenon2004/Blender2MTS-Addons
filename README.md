@@ -4,9 +4,9 @@
 
 Blender addons to aid with pack development for the popular minecraft mod Immersive Vehicles (Formerly Minecraft Transport Simulator)
 
-* [Collision Groups Export](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_collisions_exporter)
-* [Instrument Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_instrument_pos)
-* NOT UPDATED [Seat Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/tree/main/mts_seat_pos)
+* [Collision Groups Export](https://github.com/RishiMenon2004/Blender2MTS-Addons/blob/main/mts_collisions_exporter/mts_collision_group_exporter.py)
+* [Instrument Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/blob/main/mts_instrument_pos/Blender2MTS%20-%20Instrument%20Tools.zip)
+* NOT UPDATED [Seat Tools](https://github.com/RishiMenon2004/Blender2MTS-Addons/blob/main/mts_seat_pos/mts_seat_tool.py)
 
 ## Installation
 
