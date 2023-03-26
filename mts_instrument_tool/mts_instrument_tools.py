@@ -147,57 +147,46 @@ class MTS_OT_ExportInstruments(Operator, ExportHelper):
         f = open(self.filepath, "w")
 
         # Write instruments list
-        f.write("{\n")
-        f.write("\t\"instruments\": [\n")
+        self.instruments = []
         
-        firstEntry = True
         
         for obj in context.scene.objects:
             if obj.mts_instrument_settings.isInstrument:
         
-                # no comma for first entry, and set the var to false so it adds a comma for every entry after
-                if firstEntry:
-                    firstEntry = False
-                    f.write("\t\t{\n")
-                else:
-                    f.write(",\n\t\t{\n")
-        
                 # call method to write the instrument to the json file
                 self.export_instrument(obj, obj.mts_instrument_settings, f, context)
         
-        f.write("\n	]\n}")
+        json.dump({'instruments': self.instruments}, f, indent=2)
 
         self.report({'OPERATOR'}, "Export Complete")
         return {'FINISHED'}
 
     def export_instrument(self, obj, instSet, f, context):
-
-        # get properties from the object and write to the json file
-        f.write("\t\t\t\"pos\": [{x}, {y}, {z}],\n".format(x=round(obj.location[0], 5),
-                                                           y=round(obj.location[2], 5),
-                                                           z=-1*round(obj.location[1], 5)
-                                                           ))
-
-        f.write("\t\t\t\"rot\": [{x}, {y}, {z}],\n".format(x=round(math.degrees(obj.rotation_euler[0]), 5),
-                                                           y=round(math.degrees(obj.rotation_euler[1]), 5), 
-                                                           z=round(math.degrees(obj.rotation_euler[2]), 5)
-                                                           ))
-
-        f.write("\t\t\t\"scale\": {},\n".format(obj.scale[0]))
-
-        f.write("\t\t\t\"hudX\": {},\n".format(instSet.hudX))
-
-        f.write("\t\t\t\"hudY\": {},\n".format(instSet.hudY))
-
-        f.write("\t\t\t\"hudScale\": {}".format(round(instSet.hudScale, 2)))
+        
+        instrument = {
+            'pos': [
+                round(obj.location[0], 5),
+                round(obj.location[2], 5),
+                -1*round(obj.location[1], 5)
+            ],
+            'rot': [
+                round(math.degrees(obj.rotation_euler[0]), 5),
+                round(math.degrees(obj.rotation_euler[1]), 5),
+                round(math.degrees(obj.rotation_euler[2]), 5)
+            ],
+            'scale': obj.scale[0],
+            'hudX': instSet.hudX,
+            'hudY': instSet.hudY,
+            'hudScale': instSet.hudScale,
+        }
 
         if instSet.placeOnPanel:
-            f.write(",\n\t\t\t\"placeOnPanel\": {}".format(instSet.placeOnPanel))
+            instrument['placeOnPanel'] = True
 
         if instSet.applyAfter != "":
-            f.write(",\n\t\t\t\"applyAfter\": {}".format(instSet.applyAfter))
+            instrument['applyAfter'] = instSet.applyAfter
 
-        f.write("\n\t\t}")
+        self.instruments.append(instrument)
 
 # Operator: Set the hud properties of the instrument visually
 class MTS_OT_InstrumentHUDPos(Operator):
@@ -548,8 +537,8 @@ class InstrumentSettings(bpy.types.PropertyGroup):
         default=""
     )
 
-    defaultPartNumber: IntProperty(
-        name="Default Part Number",
+    optionalPartNumber: IntProperty(
+        name="Optional Part Number",
         default=0,
         soft_max=100
     )
@@ -612,7 +601,7 @@ class MTS_PT_MTSInstrumentPanel(Panel):
             layout.label(text="Slot Properties")
             box = layout.box()
             row = box.row()
-            row.prop(instSet, "defaultPartNumber")
+            row.prop(instSet, "optionalPartNumber")
             row.prop(instSet, "applyAfter", text="Apply After", icon="LIBRARY_DATA_INDIRECT")
 
 # Panel: Parent for drawing the main MTS/IV tab in the numbers panel
