@@ -177,7 +177,7 @@ class MTS_OT_ExportInstruments(Operator, ExportHelper):
             'scale': obj.scale[0],
             'hudX': instSet.hudX,
             'hudY': instSet.hudY,
-            'hudScale': instSet.hudScale,
+            'hudScale': round(instSet.hudScale, 3),
         }
 
         if instSet.placeOnPanel:
