@@ -66,7 +66,7 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
         
         json.dump({
             'parts': self.parts
-        }, f, indent=4)
+        }, f, indent=2)
         
         f.close()
         
@@ -94,8 +94,7 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
         seat = {
             'pos': [round(obj.location[0],5), round(obj.location[2],5), -1*round(obj.location[1],5)],
             'types': ["seat"],
-            'dismountPos': [round(dismountOffset[0],5), round(dismountOffset[2],5), -1*round(dismountOffset[1],5)],
-            'linkedParts': []
+            'dismountPos': [round(dismountOffset[0],5), round(dismountOffset[2],5), -1*round(dismountOffset[1],5)]
         }
         
         if isController:
@@ -108,7 +107,7 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
             seat['forceCameras'] = True
             
         if playerScale != 1:
-            seat['playerScale'] = playerScale
+            seat['playerScale'] = round(playerScale, 3)
             
         if len(seatEffects) > 0:
             effects = []
@@ -123,7 +122,9 @@ class MTS_OT_ExportSeat(bpy.types.Operator, ExportHelper):
                 effects.append(seatEffect)
             
             seat['seatEffects'] = effects.copy()
-            
+        
+        seat['linkedParts'] = []
+        
         self.parts.append(seat)
 #Operator: Add Seat Effect
 class MTS_OT_AddSeatEffect(bpy.types.Operator):
