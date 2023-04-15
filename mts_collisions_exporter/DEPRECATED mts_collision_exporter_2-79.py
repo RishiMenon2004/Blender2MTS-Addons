@@ -170,16 +170,15 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
     filename_ext = ".json"
 
     def execute(self, context):
-        firstEntry = True
         self.report({'INFO'}, "Export Started")
         f = open(self.filepath, "w")
         
+        self.collision = []
+        self.doors = []
+        
         #Write Collisions
-        f.write("{\n    \"collision\": [\n") 
         for obj in context.scene.objects:
             if obj.mts_collision_settings.isCollision and not obj.mts_collision_settings.isDoor:
-                if firstEntry:
-                    f.write("        {\n")
                 if (obj.mts_collision_settings.subdivideWidth > 0) or (obj.dimensions[0] != obj.dimensions[1]):
                     # We need to break this box into smaller boxes
                     if obj.mts_collision_settings.subdivideWidth > 0 or obj.mts_collision_settings.subdivideHeight:
@@ -247,10 +246,6 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                     for x in xList:
                         for y in yList:
                             for z in zList:
-                                if not(firstEntry):
-                                    f.write(",\n        {\n")
-                                else:
-                                    firstEntry = False
                                 # Check if we need to rotate the positions
                                 pos = [x,y,z]
                                 if rot.count(0) == 3: # No rotation
@@ -261,30 +256,16 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
 
 
                 else:
-                    if not(firstEntry):
-                        f.write(",\n        {\n")
                     self.export_collision_box(obj.location, obj.dimensions, obj.mts_collision_settings, f, context)
 
-                if firstEntry:
-                    firstEntry = False
-                
-        f.write("\n    ],\n\n")
-        
         #Write Doors
-        f.write("    \"doors\": [\n")
-        firstEntry = True
         for obj in context.scene.objects:
             if obj.mts_collision_settings.isDoor:
                 if obj.mts_collision_settings.openPos == None:
                     self.report({'INFO'}, "openPos was not defined for %s" % (obj.name))
-                if firstEntry:
-                    firstEntry = False
-                    f.write("        {\n")
-                else:
-                    f.write(",\n        {\n")
                 self.export_doors(obj, obj.mts_collision_settings, f, context)
-        f.write("\n    ],")
-        f.write("\n}")
+        
+        json.dump({ 'collision': self.collision, 'doors': self.doors }, f, indent=2)
         
         self.report({'INFO'}, "Export Complete")
 
@@ -292,58 +273,73 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             
     def export_collision_box(self, location, dimensions, colset, f, context):
         
-        f.write("            \"pos\":[%s, %s, %s],\n" % (round(location[0],5), round(location[2],5), -1*round(location[1],5)))
-        
-        f.write("            \"width\": %s, \n" % (round(dimensions[0],5)))
-        
-        f.write("            \"height\": %s" % (round(dimensions[2],5)))
+        collision_box = {
+            'pos': [
+                round(location[0],5),
+                round(location[2],5),
+                -1*round(location[1],5)
+            ],
+            
+            'width': round(dimensions[0],5),
+            
+            'height': round(dimensions[2],5)
+        }
         
         if colset.isInterior:
-            f.write(",\n            \"isInterior\": true")
+            collision_box['isInterior'] = True
         
         if colset.collidesWithLiquids:
-            f.write(",\n            \"collidesWithLiquids\": true")
+            collision_box['collidesWithLiquids'] = True
         
         if colset.armorThickness != 0:
-            f.write(",\n            \"armorThickness\": %s" % (colset.armorThickness))
-        
-        f.write("\n        }")
+            collision_box['armorThickness'] = colset.armorThickness
+
+        self.collision.append(collision_box)
         
     def export_doors(self, obj, colset, f, context):
         
         openPos = colset.openPos
         
-        #write the entries for one collision
-        f.write("            \"name\": \"%s\",\n" % (colset.doorName))
+        door = {
+            'name': colset.doorName,
+            
+            'closedPos': [
+                round(obj.location[0],5),
+                round(obj.location[2],5),
+                -1*round(obj.location[1],5)
+            ],
+            
+            'width': round(obj.dimensions[0],5),
+            
+            'height': round(obj.dimensions[2],5)
+        }
         
-        f.write("            \"closedPos\":[%s, %s, %s],\n" % (round(obj.location[0],5), round(obj.location[2],5), -1*round(obj.location[1],5)))
-
         if openPos != None:
-            f.write("            \"openPos\":[%s, %s, %s],\n" % (round(openPos.location[0],5), round(openPos.location[2],5), -1*round(openPos.location[1],5)))
+            door['openPos'] = [
+                round(openPos.location[0],5),
+                round(openPos.location[2],5),
+                -1*round(openPos.location[1],5)
+            ]
         else:
-            f.write("            \"openPos\": \"was not defined for %s\",\n" % (obj.name))
-        
-        f.write("            \"width\": %s, \n" % (round(obj.dimensions[0],5)))
-        
-        f.write("            \"height\": %s" % (round(obj.dimensions[2],5)))
+            door['openPos'] = "was not defined for %s" % (obj.name)
         
         if colset.closedByDefault:
-            f.write(",\n            \"closedByDefault\": true")
+            door['closedByDefault'] = True
         
         if colset.closeOnMovement:
-            f.write(",\n            \"closeOnMovement\": true")
+            door['closeOnMovement'] = True
             
         if colset.activateOnSeated:
-            f.write(",\n            \"activateOnSeated\": true")
+            door['activateOnSeated'] = True
             
         if colset.ignoresClicks:
-            f.write(",\n            \"ignoresClicks\": true")
+            door['ignoresClicks'] = True
             
         if colset.doorArmorThickness != 0:
-            f.write(",\n            \"armorThickness\": %s" % (colset.armorThickness))
+            door['armorThickness'] = colset.armorThickness
             
-        f.write("\n        }")
-
+        self.doors.append(door)
+            
 #Operator: Mark selelcted objects as collisions/doors
 class MTS_OT_MarkAsCollision(bpy.types.Operator):
     #Class options
@@ -390,11 +386,22 @@ class CollisionSettings(bpy.types.PropertyGroup):
         target_colset['isDoor'] = False
             
         return None
+    
+    def update_collision(self, context):
+        obj = context.object
+        colset = obj.mts_collision_settings
+        colset.isDoor = False
+        
+    def update_door(self, context):
+        obj = context.object
+        colset = obj.mts_collision_settings
+        colset.isCollision = False
 
     #collisions
     isCollision= BoolProperty(
         name = "Is Collision",
-        default = False
+        default = False,
+        update = update_collision
         )
                 
     isInterior= BoolProperty(
@@ -431,7 +438,8 @@ class CollisionSettings(bpy.types.PropertyGroup):
     #doors
     isDoor= BoolProperty(
         name = "Is Door",
-        default = False
+        default = False,
+        update = update_door
         )
     
     doorName= StringProperty(
