@@ -19,7 +19,7 @@
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (1, 8),
+    "version": (2, 0),
     "blender": (2, 79, 0),
     "location": "Object Properties —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
