@@ -32,9 +32,9 @@ from bpy.types import Panel
 from bpy_extras.io_utils import (ExportHelper, ImportHelper)
 from bpy.props import (
         BoolProperty,
+        BoolVectorProperty,
         FloatProperty,
         StringProperty,
-        EnumProperty,
         PointerProperty,
         )
 
@@ -48,7 +48,7 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
     #Class options
     bl_idname = "mts.import_collision_boxes"
     bl_label = "Import Collisions"
-    bl_description = "Import collision and door boxes from a JSON file"
+    bl_description = "Import collision boxes from a JSON file"
     
     filename_ext = ".json"
     filter_glob= StringProperty(
@@ -61,97 +61,36 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
         with open(self.filepath, 'r') as f:
             file = json.loads(f.read())
         
-            if 'collision' in file:
+            if 'collision' in file and len(file['collision']) > 0:
                 collisions = file['collision']
                 
                 for collision in collisions:
                     width = collision['width']
                     height = collision['height']
                     pos = collision['pos']
+                    floats = False
+                    interior = False
+                    armor = 0
                     
                     if 'collidesWithLiquids' in collision:
                         floats = collision['collidesWithLiquids']
-                    else:
-                        floats = False
                         
                     if 'isInterior' in collision:
                         interior = collision['isInterior']
-                    else:
-                        interior = False
                         
                     if 'armorThickness' in collision:
                         armor = collision['armorThickness']
-                    else:
-                        armor = 0
                         
                     bpy.ops.mesh.primitive_cube_add(radius=2, location=(pos[0], -1*pos[2], pos[1]))
                     obj = context.object                    
                     obj.dimensions = (width, width, height)
                     settings = obj.mts_collision_settings
-                    settings.isCollision = True
+                    settings.collisionType = (False, True, False)
                     settings.collidesWithLiquids = floats
                     settings.isInterior = interior
                     settings.armorThickness = armor
-                
-            if 'doors' in file:
-                doors = file['doors']
-                
-                for door in doors:
-                    name = door['name']
-                    width = door['width']
-                    height = door['height']
-                    closedPos = door['closedPos']
-                    openPos = door['openPos']
                     
-                    if 'closeOnMovement' in door:
-                        movement = door['closeOnMovement']
-                    else:
-                        movement = False
-                        
-                    if 'closedByDefault' in door:
-                        default = door['closedByDefault']
-                    else:
-                        default = False    
-                        
-                    if 'activateOnSeated' in door:
-                        seated = door['activateOnSeated']
-                    else:
-                        seated = False    
-                        
-                    if 'ignoresClicks' in door:
-                        clicks = door['ignoresClicks']
-                    else:
-                        clicks = False
-                        
-                    if 'armorThickness' in door:
-                        armor = door['armorThickness']
-                    else:
-                        armor = 0
-                    
-                    bpy.ops.mesh.primitive_cube_add(radius=2, location=(closedPos[0], -1*closedPos[2], closedPos[1]))
-                    closedobj = context.object
-                    closedobj.dimensions = (width, width, height)
-                    closedobj.name = name + "_closed"
-                    
-                    bpy.ops.mesh.primitive_cube_add(radius=2, location=(openPos[0], -1*openPos[2], openPos[1]))
-                    openobj = context.object
-                    openobj.dimensions = (width, width, height)
-                    openobj.name = name + "_open"
-                    openobj.draw_type = "WIRE"
-                    
-                    settings = closedobj.mts_collision_settings
-                    
-                    settings.isDoor = True
-                    settings.doorName = name
-                    openobj.mts_collision_settings.doorName = name
-                    settings.closeOnMovement = movement
-                    settings.closedByDefault = default
-                    settings.activateOnSeated = seated
-                    settings.ignoresClicks = clicks
-                    settings.doorArmorThickness = armor
-                    settings.openPos = openobj
-                    
-            if 'collision' not in file or 'doors' not in file:
+            else:
                 self.report({'ERROR_INVALID_INPUT'}, "NO COLLISIONS FOUND")
                 return {'CANCELLED'}
         
@@ -174,11 +113,10 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         f = open(self.filepath, "w")
         
         self.collision = []
-        self.doors = []
         
         #Write Collisions
         for obj in context.scene.objects:
-            if obj.mts_collision_settings.isCollision and not obj.mts_collision_settings.isDoor:
+            if obj.mts_collision_settings.collisionType[1]:
                 if (obj.mts_collision_settings.subdivideWidth > 0) or (obj.dimensions[0] != obj.dimensions[1]):
                     # We need to break this box into smaller boxes
                     if obj.mts_collision_settings.subdivideWidth > 0 or obj.mts_collision_settings.subdivideHeight:
@@ -254,18 +192,10 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                                     newPos = rotate(pos, rot, origin)
                                     self.export_collision_box(newPos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
 
-
                 else:
                     self.export_collision_box(obj.location, obj.dimensions, obj.mts_collision_settings, f, context)
-
-        #Write Doors
-        for obj in context.scene.objects:
-            if obj.mts_collision_settings.isDoor:
-                if obj.mts_collision_settings.openPos == None:
-                    self.report({'INFO'}, "openPos was not defined for %s" % (obj.name))
-                self.export_doors(obj, obj.mts_collision_settings, f, context)
         
-        json.dump({ 'collision': self.collision, 'doors': self.doors }, f, indent=2)
+        json.dump({ 'collision': self.collision }, f, indent=2)
         
         self.report({'INFO'}, "Export Complete")
 
@@ -295,113 +225,57 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             collision_box['armorThickness'] = colset.armorThickness
 
         self.collision.append(collision_box)
-        
-    def export_doors(self, obj, colset, f, context):
-        
-        openPos = colset.openPos
-        
-        door = {
-            'name': colset.doorName,
             
-            'closedPos': [
-                round(obj.location[0],5),
-                round(obj.location[2],5),
-                -1*round(obj.location[1],5)
-            ],
-            
-            'width': round(obj.dimensions[0],5),
-            
-            'height': round(obj.dimensions[2],5)
-        }
-        
-        if openPos != None:
-            door['openPos'] = [
-                round(openPos.location[0],5),
-                round(openPos.location[2],5),
-                -1*round(openPos.location[1],5)
-            ]
-        else:
-            door['openPos'] = "was not defined for %s" % (obj.name)
-        
-        if colset.closedByDefault:
-            door['closedByDefault'] = True
-        
-        if colset.closeOnMovement:
-            door['closeOnMovement'] = True
-            
-        if colset.activateOnSeated:
-            door['activateOnSeated'] = True
-            
-        if colset.ignoresClicks:
-            door['ignoresClicks'] = True
-            
-        if colset.doorArmorThickness != 0:
-            door['armorThickness'] = colset.armorThickness
-            
-        self.doors.append(door)
-            
-#Operator: Mark selelcted objects as collisions/doors
+#Operator: Mark selected objects as collisions/doors
 class MTS_OT_MarkAsCollision(bpy.types.Operator):
     #Class options
     bl_idname = "mts.mark_as_collision"
-    bl_label = "(MTS/IV) Mark all selected as collison"
+    bl_label = "(MTS/IV) Mark all selected as collision"
     bl_property = "type_search"
     
-        
     @classmethod
     def poll(cls, context):
         return context.object is not None
     
-    type_search= EnumProperty(
-    name="Collision Type Search",
-    items=(
-            ('COLLISION', "Collision", ""),
-            ('DOOR', "Door", ""),
-        ),
-    )
-    
     def execute(self, context):
-        if self.type_search == 'COLLISION':
-            for obj in context.selected_objects:
-                    obj.mts_collision_settings['isCollision'] = True
-        elif self.type_search == 'DOOR':
-            for obj in context.selected_objects:
-                    obj.mts_collision_settings['isDoor'] = True
+        for obj in context.selected_objects:
+                obj.mts_collision_settings['collisionType'] = (False, True, False)
         return {'FINISHED'}
+
+def get_collision_type(self):
+    if ('collisionType' in self):
+        return self['collisionType']
+    else:
+        return (True, False) 
+
+def set_collision_type(self, value):
+    if ('collisionType' in self):
+        prevValue = self['collisionType']
+    else:
+        prevValue = (True, False) 
     
-    def invoke(self, context, event):
-        context.window_manager.invoke_search_popup(self)
-        return {'RUNNING_MODAL'}
+    new_value = (False, False)
+    
+    if (prevValue[0] != value[0]):
+        new_value = (True, False)
+        
+    elif (prevValue[1] != value[1]):
+        if(value[1] == False):
+            new_value = (True, False)
+        else:
+            new_value = (False, True)
+    
+    self['collisionType'] = new_value
 
 #Create the custom properties for collision and door boxes  
 class CollisionSettings(bpy.types.PropertyGroup):
     
-    def update_open_pos(self, context):
-        obj = context.object
-        colset = obj.mts_collision_settings
-        target_obj = colset.openPos
-        target_colset = target_obj.mts_collision_settings
-        
-        target_colset['isCollision'] = False
-        target_colset['isDoor'] = False
-            
-        return None
-    
-    def update_collision(self, context):
-        obj = context.object
-        colset = obj.mts_collision_settings
-        colset.isDoor = False
-        
-    def update_door(self, context):
-        obj = context.object
-        colset = obj.mts_collision_settings
-        colset.isCollision = False
-
-    #collisions
-    isCollision= BoolProperty(
-        name = "Is Collision",
-        default = False,
-        update = update_collision
+    collisionType= BoolVectorProperty(
+        name = "Collision Type",
+        default=(True, False),
+        size=2,
+        set=set_collision_type,
+        get=get_collision_type
         )
                 
     isInterior= BoolProperty(
@@ -434,51 +308,6 @@ class CollisionSettings(bpy.types.PropertyGroup):
         min = 0,
         max = 1000
         )
-    
-    #doors
-    isDoor= BoolProperty(
-        name = "Is Door",
-        default = False,
-        update = update_door
-        )
-    
-    doorName= StringProperty(
-        name = "Door Name",
-        default = "unnamed_door"
-        )
-    
-    closedByDefault= BoolProperty(
-        name = "Closed by Default",
-        default = False
-        )
-        
-    closeOnMovement= BoolProperty(
-        name = "Close on Movement",
-        default = False
-        )
-        
-    activateOnSeated= BoolProperty(
-        name = "Activate When Seated",
-        default = False
-        )
-        
-    ignoresClicks= BoolProperty(
-        name = "Ignores User Clicks",
-        default = False
-        )
-    
-    doorArmorThickness= FloatProperty(
-        name = "Armour Thickness",
-        default = 0.0,
-        min = 0,
-        max = 1000
-        )
-    
-    openPos= PointerProperty(
-        type = bpy.types.Object,
-        name = "Open Position Box",
-        update = update_open_pos
-        )
 
 #Panel: Draw the collision and door box panel
 class MTS_PT_MTSCollisionBasePanel(Panel):
@@ -504,59 +333,36 @@ class MTS_PT_MTSCollisionBasePanel(Panel):
         #import operator button
         row.operator(icon='IMPORT', operator="mts.import_collision_boxes")
         row = layout.row()
-        #warning text
-        row.label(icon='ERROR', text="Note: openPos boxes should not use the Collision or Door property else it'll mess you up")
 
         row = layout.row()
-        row.label(text="Collision Properties:")
-        #Draw the collision box panel
-        #collsion property
-        row = layout.row()
-        row.prop(collisionsettings, "isCollision", text = "Collision")
+        row.label(text="Collision Type:")
+        row = layout.row(align=True)
+        row.prop(collisionsettings, "collisionType", text = "None", index=0, icon='OBJECT_DATA')
+        row.prop(collisionsettings, "collisionType", text = "Collision Box", index=1, icon='VIEW3D')
+        
         #check if the collision property is enabled
-        if collisionsettings.isCollision == True:
-            #interior collision
-            row.prop(collisionsettings, "isInterior", text = "Interior Collision") 
-            #floating collision
+        if collisionsettings.collisionType[1] == True:
             row = layout.row()
-            row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids")
+            box = row.box()
+            
+            row = box.row()
+            row.label(text="Collision Properties:")
+            #interior collision
+            row = box.row()
+            row.prop(collisionsettings, "isInterior", text = "Interior Collision", icon='SNAP_FACE') 
+            
+            row = box.row()
+            #floating collision
+            row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids", icon='MOD_WAVE')
             #armour thickness
             row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
-            row = layout.row()
+            
+            row = box.row()
             #width of subdivision, to split a big box into multiple ones
             row.prop(collisionsettings, "subdivideWidth", text = "Subdivision Width")
             #height of the subdivision, to split a big box into multiple ones
             row.prop(collisionsettings, "subdivideHeight", text = "Subdivision Height")
             
-        row = layout.row()
-        row.label(text="Door Properties:")
-        #Draw the door hitbox panel
-        row = layout.row()
-        #check if the door property is enabled if so show the name property
-        if collisionsettings.isDoor == True:
-            row.prop(collisionsettings, "doorName", text = "Door Name")
-            row = layout.row()
-        #door property
-        row.prop(collisionsettings, "isDoor", text = "Door")
-        #check if the door property is enabled
-        if collisionsettings.isDoor == True:
-            #add the rest of the properties 
-            #closed by default
-            row.prop(collisionsettings, "closedByDefault", text = "Closed by Default") 
-            row = layout.row()
-            #close on movement
-            row.prop(collisionsettings, "closeOnMovement", text = "Close on Movement")
-            #close/open when sitting/dismounting
-            row.prop(collisionsettings, "activateOnSeated", text = "Activate When Seated")
-            row = layout.row()
-            #ignores clicks
-            row.prop(collisionsettings, "ignoresClicks", text = "Ignores User Clicks")
-            #armour thickness
-            row.prop(collisionsettings, "doorArmorThickness", text = "Armor Thickness")
-            row = layout.row()
-            #pointer to the open pos object of the door
-            row.prop(collisionsettings, "openPos", text = "Open Pos Box")
-
 #Panel: Parent for drawing the main MTS/IV tab in the numbers panel
 class MTS_View3D_Parent:
     #Class options
@@ -587,7 +393,7 @@ class MTS_V3D_CollisionPanel(MTS_View3D_Parent, Panel):
 
 #Create export button for export menu
 def menu_func_export(self, context):
-    self.layout.operator("mts.export_collision_boxes", text="MTS/IV Collision Boxes Array (.json)")
+    self.layout.operator("mts.export_collision_boxes", text="MTS/IV Collisions(.json)")
 
 #Create import button for import menu
 def menu_func_import(self, context):
@@ -623,7 +429,7 @@ def register():
     for cls in classes:
         register_class(cls)
         
-    bpy.types.Object.mts_collision_settings = bpy.props.PointerProperty(type=CollisionSettings)
+    bpy.types.Object.mts_collision_settings = PointerProperty(type=CollisionSettings)
     
     #Append the export operator to the export menu
     bpy.types.INFO_MT_file_export.append(menu_func_export)
