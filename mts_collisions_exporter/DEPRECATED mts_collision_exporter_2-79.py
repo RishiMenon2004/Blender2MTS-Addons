@@ -33,9 +33,11 @@ from bpy_extras.io_utils import (ExportHelper, ImportHelper)
 from bpy.props import (
         BoolProperty,
         BoolVectorProperty,
+        EnumProperty,
         FloatProperty,
-        StringProperty,
+        IntProperty,
         PointerProperty,
+        StringProperty,
         )
 
 #Import python bundled modules
@@ -231,7 +233,7 @@ class MTS_OT_MarkAsCollision(bpy.types.Operator):
     #Class options
     bl_idname = "mts.mark_as_collision"
     bl_label = "(MTS/IV) Mark all selected as collision"
-    bl_property = "type_search"
+    bl_description = "Mark selected objects as a collision box"
     
     @classmethod
     def poll(cls, context):
@@ -239,7 +241,7 @@ class MTS_OT_MarkAsCollision(bpy.types.Operator):
     
     def execute(self, context):
         for obj in context.selected_objects:
-                obj.mts_collision_settings['collisionType'] = (False, True, False)
+                obj.mts_collision_settings['collisionType'] = (False, True)
         return {'FINISHED'}
 
 def get_collision_type(self):
@@ -277,22 +279,57 @@ class CollisionSettings(bpy.types.PropertyGroup):
         set=set_collision_type,
         get=get_collision_type
         )
-                
-    isInterior= BoolProperty(
-        name = "Interior Collision",
-        default = False
-        )
         
     collidesWithLiquids= BoolProperty(
-        name = "Floats on Liquids",
+        name = "Collides With Liquids",
         default = False
         )
-        
+    
     armorThickness= FloatProperty(
         name = "Armour Thickness",
         default = 0.0,
         min = 0,
         max = 1000
+        )
+    
+    heatArmorThickness= FloatProperty(
+        name = "Heat Armour Thickness",
+        default = 0.0,
+        min = 0,
+        max = 1000
+        )
+    
+    damageMultiplier= FloatProperty(
+        name = "Damage Multiplier",
+        default = 1.0,
+        min = 0,
+        max = 1000
+        )
+    
+    variableName= StringProperty(
+        name = "Variable Name",
+        default = ""
+        )
+    
+    variableValue= IntProperty(
+        name = "Variable Value",
+        default = 0
+        )
+    
+    variableType= EnumProperty(
+        name = "Variable Type",
+        default = "toggle",
+        items = [
+            ("toggle",      "Toggle",       "Clicking this box will toggle the variable from 0 to 1, or 1 to 0 depending on current value"),
+            ("set",         "Set",          "Clicking this box will set the variable to the defined value"),
+            ("increment",   "Increment",    "Clicking this box will increment the variable by the defined value"),
+            ("button",      "Button",       "Clicking this box will set the variable to the value. When the player lets go of the mouse button, it will be set back to 0")
+        ]
+        )
+    
+    manualSubdivision= BoolProperty(
+        name = "Manual Subdivision",
+        default = False
         )
         
     subdivideWidth= FloatProperty(
@@ -327,11 +364,11 @@ class MTS_PT_MTSCollisionBasePanel(Panel):
         #get it's custom properties
         collisionsettings = obj.mts_collision_settings
         
-        row = layout.row()
-        #export operator button
-        row.operator(icon='EXPORT', operator="mts.export_collision_boxes")
+        row = layout.row(align=True)
         #import operator button
         row.operator(icon='IMPORT', operator="mts.import_collision_boxes")
+        #export operator button
+        row.operator(icon='EXPORT', operator="mts.export_collision_boxes")
         row = layout.row()
 
         row = layout.row()
@@ -340,28 +377,50 @@ class MTS_PT_MTSCollisionBasePanel(Panel):
         row.prop(collisionsettings, "collisionType", text = "None", index=0, icon='OBJECT_DATA')
         row.prop(collisionsettings, "collisionType", text = "Collision Box", index=1, icon='VIEW3D')
         
+        layout.separator()
+        
         #check if the collision property is enabled
-        if collisionsettings.collisionType[1] == True:
+        if collisionsettings['collisionType'][1] == True:
             row = layout.row()
             box = row.box()
             
             row = box.row()
-            row.label(text="Collision Properties:")
-            #interior collision
-            row = box.row()
-            row.prop(collisionsettings, "isInterior", text = "Interior Collision", icon='SNAP_FACE') 
+            row.label(text="Collision Box:")
             
             row = box.row()
-            #floating collision
-            row.prop(collisionsettings, "collidesWithLiquids", text = "Floats on Liquids", icon='MOD_WAVE')
-            #armour thickness
-            row.prop(collisionsettings, "armorThickness", text = "Armor Thickness")
+            row.prop(collisionsettings, "collidesWithLiquids", icon='MOD_WAVE')
+            row.prop(collisionsettings, "damageMultiplier")
             
             row = box.row()
-            #width of subdivision, to split a big box into multiple ones
-            row.prop(collisionsettings, "subdivideWidth", text = "Subdivision Width")
-            #height of the subdivision, to split a big box into multiple ones
-            row.prop(collisionsettings, "subdivideHeight", text = "Subdivision Height")
+            row.prop(collisionsettings, "armorThickness")
+            row.prop(collisionsettings, "heatArmorThickness")
+            
+            box.separator()
+            
+            row = box.row()
+            row.label("Variable:")
+            
+            row = box.row()
+            row.prop(collisionsettings, "variableName", text="Name")
+            
+            row = box.row()
+            row.prop(collisionsettings, "variableValue")
+            row.prop(collisionsettings, "variableType", text="")
+            
+            box.separator()
+            
+            row = box.row()
+            row.label("Subdivision:")
+            
+            row = box.row()
+            row.prop(collisionsettings, "manualSubdivision", icon='MODIFIER')
+            
+            if (collisionsettings['manualSubdivision']):
+                row = box.row()
+                #width of subdivision, to split a big box into multiple ones
+                row.prop(collisionsettings, "subdivideWidth")
+                #height of the subdivision, to split a big box into multiple ones
+                row.prop(collisionsettings, "subdivideHeight")
             
 #Panel: Parent for drawing the main MTS/IV tab in the numbers panel
 class MTS_View3D_Parent:
@@ -383,13 +442,13 @@ class MTS_V3D_CollisionPanel(MTS_View3D_Parent, Panel):
         layout = self.layout
         row = layout.row()
         #mark as collision operator button
-        row.operator("mts.mark_as_collision")
-        row = layout.row()
-        #export operator button
-        row.operator(icon="EXPORT", operator="mts.export_collision_boxes")
+        row.operator("mts.mark_as_collision", text="Mark As Collision")
         row = layout.row()
         #import operator button
-        row.operator(icon="IMPORT", operator="mts.import_collision_boxes")
+        row.operator(operator="mts.import_collision_boxes")
+        row = layout.row()
+        #export operator button
+        row.operator(operator="mts.export_collision_boxes")
 
 #Create export button for export menu
 def menu_func_export(self, context):
