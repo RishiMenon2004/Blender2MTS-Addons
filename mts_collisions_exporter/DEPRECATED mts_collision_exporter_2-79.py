@@ -19,7 +19,7 @@
 bl_info = {
     "name": "MTS/IV Collision Box Exporter",
     "author": "Turbo Defender | Gyro Hero | Laura Darkez",
-    "version": (2, 0),
+    "version": (2, 1),
     "blender": (2, 79, 0),
     "location": "Object Properties —> MTS/IV Collision Properties",
     "description": "Exports Blender cubes as MTS/IV collision boxes",
@@ -70,27 +70,47 @@ class MTS_OT_ImportCollisions(bpy.types.Operator, ImportHelper):
                     width = collision['width']
                     height = collision['height']
                     pos = collision['pos']
-                    floats = False
-                    interior = False
-                    armor = 0
+                    collidesWithLiquids = False
+                    armorThickness = 0
+                    heatArmorThickness = 0
+                    damageMultiplier = 0
+                    variableName = ""
+                    variableValue = 0
+                    variableType = "toggle"
                     
                     if 'collidesWithLiquids' in collision:
-                        floats = collision['collidesWithLiquids']
-                        
-                    if 'isInterior' in collision:
-                        interior = collision['isInterior']
+                        collidesWithLiquids = collision['collidesWithLiquids']
                         
                     if 'armorThickness' in collision:
-                        armor = collision['armorThickness']
+                        armorThickness = collision['armorThickness']
+                        
+                    if 'heatArmorThickness' in collision:
+                        heatArmorThickness = collision['heatArmorThickness']
+                        
+                    if 'damageMultiplier' in collision:
+                        damageMultiplier = collision['damageMultiplier']
+                        
+                    if 'variableName' in collision:
+                        variableName = collision['variableName']
+                        
+                    if 'variableValue' in collision:
+                        variableValue = collision['variableValue']
+                        
+                    if 'variableType' in collision:
+                        variableType = collision['variableType']
                         
                     bpy.ops.mesh.primitive_cube_add(radius=2, location=(pos[0], -1*pos[2], pos[1]))
                     obj = context.object                    
                     obj.dimensions = (width, width, height)
                     settings = obj.mts_collision_settings
                     settings.collisionType = (False, True, False)
-                    settings.collidesWithLiquids = floats
-                    settings.isInterior = interior
-                    settings.armorThickness = armor
+                    settings.collidesWithLiquids = collidesWithLiquids
+                    settings.armorThickness = armorThickness
+                    settings.heatArmorThickness = heatArmorThickness
+                    settings.damageMultiplier = damageMultiplier
+                    settings.variableName = variableName
+                    settings.variableValue = variableValue
+                    settings.variableType = variableType
                     
             else:
                 self.report({'ERROR_INVALID_INPUT'}, "NO COLLISIONS FOUND")
@@ -217,14 +237,22 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
             'height': round(dimensions[2],5)
         }
         
-        if colset.isInterior:
-            collision_box['isInterior'] = True
-        
         if colset.collidesWithLiquids:
             collision_box['collidesWithLiquids'] = True
         
-        if colset.armorThickness != 0:
+        if colset.armorThickness > 0:
             collision_box['armorThickness'] = colset.armorThickness
+        
+        if colset.heatArmorThickness > 0:
+            collision_box['heatArmorThickness'] = colset.heatArmorThickness
+        
+        if colset.heatArmorThickness != 1.0:
+            collision_box['heatArmorThickness'] = colset.heatArmorThickness
+        
+        if colset.variableName != "" and colset.variableValue != 0:
+            collision_box['variableName'] = colset.variableName
+            collision_box['variableValue'] = colset.variableValue
+            collision_box['variableType'] = colset.variableType
 
         self.collision.append(collision_box)
             
@@ -242,6 +270,18 @@ class MTS_OT_MarkAsCollision(bpy.types.Operator):
     def execute(self, context):
         for obj in context.selected_objects:
                 obj.mts_collision_settings['collisionType'] = (False, True)
+                if ('defaultsSet' not in obj.mts_collision_settings):
+                    obj.mts_collision_settings['defaultsSet'] = True
+                    obj.mts_collision_settings['collidesWithLiquids'] = False
+                    obj.mts_collision_settings['armorThickness'] = 0
+                    obj.mts_collision_settings['heatArmorThickness'] = 0
+                    obj.mts_collision_settings['damageMultiplier'] = 0
+                    obj.mts_collision_settings['variableName'] = ""
+                    obj.mts_collision_settings['variableValue'] = 0
+                    obj.mts_collision_settings['variableType'] = "toggle"
+                    obj.mts_collision_settings['manualSubdivision'] = False
+                    obj.mts_collision_settings['subdivideWidth'] = 0
+                    obj.mts_collision_settings['subdivideHeight'] = 0
         return {'FINISHED'}
 
 def get_collision_type(self):
@@ -266,7 +306,20 @@ def set_collision_type(self, value):
             new_value = (True, False)
         else:
             new_value = (False, True)
-    
+        
+    if ('defaultsSet' not in self):
+        self['defaultsSet'] = True
+        self['collidesWithLiquids'] = False
+        self['armorThickness'] = 0
+        self['heatArmorThickness'] = 0
+        self['damageMultiplier'] = 0
+        self['variableName'] = ""
+        self['variableValue'] = 0
+        self['variableType'] = "toggle"
+        self['manualSubdivision'] = False
+        self['subdivideWidth'] = 0
+        self['subdivideHeight'] = 0
+        
     self['collisionType'] = new_value
 
 #Create the custom properties for collision and door boxes  
@@ -278,6 +331,10 @@ class CollisionSettings(bpy.types.PropertyGroup):
         size=2,
         set=set_collision_type,
         get=get_collision_type
+        )
+    
+    defaultsSet= BoolProperty(
+        default=False
         )
         
     collidesWithLiquids= BoolProperty(
