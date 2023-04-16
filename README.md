@@ -1,6 +1,7 @@
 # Blender2MTS - MTS Helper Addons for Blender
 
-![Blender2MTS Banner](/wiki_images/social_banner.png)
+![Blender2MTS Banner](/wiki_images/social_banner.png#gh-light-mode-only)
+![Blender2MTS Banner](/wiki_images/social_banner_dark.png#gh-dark-mode-only)
 
 Blender addons to aid with pack development for the popular minecraft mod Immersive Vehicles (Formerly Minecraft Transport Simulator)
 
