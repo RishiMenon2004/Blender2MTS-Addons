@@ -794,7 +794,12 @@ class MTS_PT_MTSCollisionPanel(Panel):
         
         #assign/remove object from collision group
         row = layout.row(align=True)
-        row.operator("mts.assign_collision_to_group", text="Assign")
+
+        if len(context.selected_objects) > 1: 
+            row.operator("mts.assign_all_collisions_to_group", text="Assign All")
+        else:
+            row.operator("mts.assign_collision_to_group", text="Assign")
+        
         row.operator("mts.remove_collision_from_group", text="Remove")
         
         layout.separator()
