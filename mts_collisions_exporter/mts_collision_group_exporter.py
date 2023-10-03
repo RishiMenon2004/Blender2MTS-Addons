@@ -439,7 +439,7 @@ class MTS_OT_DeleteGroupFromList(bpy.types.Operator):
 #Operator: Assign Selected Cube to Collision Group
 class MTS_OT_AssignCollisionToGroup(bpy.types.Operator):
     bl_idname = "mts.assign_collision_to_group"
-    bl_label = "(MTS/IV) Assign Collision Box to Selected Collision Group"
+    bl_label = "(MTS/IV) Assign Selected Collision Box to Active Collision Group"
     bl_description = "Assign the selected collision box to the active collision group"
     
     @classmethod
@@ -488,7 +488,29 @@ class MTS_OT_AssignCollisionToGroup(bpy.types.Operator):
             
             return {'FINISHED'}
 
-#LayoutOperator: Delete Active Collision Group
+#Operator: Assign All Selected Cubes to Collision Group
+class MTS_OT_AssignAllCollisionsToGroup(bpy.types.Operator):
+    bl_idname = "mts.assign_all_collisions_to_group"
+    bl_label = "(MTS/IV) Assign All Selected Collision Boxes to Active Collision Group"
+    bl_description = "Assign all selected collision boxes to the active collision group"
+
+    @classmethod
+    def poll(cls, context):
+        has_collision_groups = context.scene.mts_collision_groups
+        has_objects_selected = len(context.selected_objects) > 1
+        
+        return has_collision_groups and has_objects_selected
+        
+    def execute(self, context):
+        obj_list = context.selected_objects.copy()
+		
+        for obj in obj_list:
+            context.view_layer.objects.active = obj
+            bpy.ops.mts.assign_collision_to_group()
+        
+        return {'FINISHED'}
+
+#Operator: Delete Active Collision From Group
 class MTS_OT_DeleteCollisionFromGroup(bpy.types.Operator):
     bl_idname = "mts.remove_collision_from_group"
     bl_label = "(MTS/IV) Remove Collision From Collision Group"
