@@ -5,7 +5,7 @@
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 3 of the License, or
 #   (at your option) any later version.
-#   
+#
 #   This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -509,7 +509,43 @@ class MTS_OT_AssignAllCollisionsToGroup(bpy.types.Operator):
             bpy.ops.mts.assign_collision_to_group()
         
         return {'FINISHED'}
+        
+#Operator: Unssign All Selected Cubes from Collision Group
+class MTS_OT_RemoveAllCollisionsFromGroup(bpy.types.Operator):
+    bl_idname = "mts.remove_all_collisions_from_group"
+    bl_label = "(MTS/IV) Remove All Selected Collisions From Active Group"
+    bl_description = "Unassign all selected collision boxes from the active collision group"
 
+    @classmethod
+    def poll(cls, context):
+        # Only active if there’s at least one group and more than one object selected
+        return (context.scene.mts_collision_groups and
+                len(context.selected_objects) > 0)
+
+    def execute(self, context):
+        scene = context.scene
+        group = scene.mts_collision_groups[scene.mts_collision_groups_index]
+        removed = 0
+
+        for obj in context.selected_objects:
+            # find this object in the group's collisions
+            for i, ptr in enumerate(group.collisions):
+                if ptr.collision == obj:
+                    # clear its settings
+                    obj.mts_collision_settings.self_index = -1
+                    obj.mts_collision_settings.assignedCollisionGroupIndex = -1
+                    # remove it
+                    group.collisions.remove(i)
+                    removed += 1
+                    break
+
+        # clamp active index
+        if group.collision_index >= len(group.collisions):
+            group.collision_index = max(0, len(group.collisions) - 1)
+
+        self.report({'INFO'}, f"Unassigned {removed} object(s).")
+        return {'FINISHED'}
+        
 #Operator: Delete Active Collision From Group
 class MTS_OT_DeleteCollisionFromGroup(bpy.types.Operator):
     bl_idname = "mts.remove_collision_from_group"
@@ -523,21 +559,34 @@ class MTS_OT_DeleteCollisionFromGroup(bpy.types.Operator):
     def execute(self, context):
         collision_group_list = context.scene.mts_collision_groups
         cg_index = context.scene.mts_collision_groups_index
-        
         active_group = collision_group_list[cg_index]
-        
-        if len(active_group.collisions) > 0:
-            active_collision = active_group.collisions[active_group.collision_index]
-                    
-            if active_collision.collision:
-                print("Removed collision" + active_collision.collision.name + " from group " + active_group.name)
-                active_collision.collision.mts_collision_settings.self_index = -1
-                active_collision.collision.mts_collision_settings.assignedCollisionGroupIndex = -1
-                
-            active_group.collisions.remove(active_group.collision_index)
-            new_index = min(max(0, active_group.collision_index - 1), len(active_group.collisions) - 1)
-            active_group.collision_index = new_index if new_index >= 0 else 0
-        
+
+        selected_obj = context.active_object
+        if not selected_obj:
+            self.report({'WARNING'}, "No object selected.")
+            return {'CANCELLED'}
+
+        found_index = -1
+        for i, col_ptr in enumerate(active_group.collisions):
+            if col_ptr.collision == selected_obj:
+                found_index = i
+                break
+
+        if found_index == -1:
+            self.report({'WARNING'}, "Selected object is not assigned to this group.")
+            return {'CANCELLED'}
+
+        # Clear object settings BEFORE removing from collection
+        selected_obj.mts_collision_settings.self_index = -1
+        selected_obj.mts_collision_settings.assignedCollisionGroupIndex = -1
+
+        active_group.collisions.remove(found_index)
+
+        # Update the group's collision_index safely
+        if active_group.collision_index >= len(active_group.collisions):
+            active_group.collision_index = max(0, len(active_group.collisions) - 1)
+
+        self.report({'INFO'}, f"Removed {selected_obj.name} from {active_group.name}")
         return {'FINISHED'}
 
 #PropertyGroup: Collision Box
@@ -797,10 +846,10 @@ class MTS_PT_MTSCollisionPanel(Panel):
 
         if len(context.selected_objects) > 1: 
             row.operator("mts.assign_all_collisions_to_group", text="Assign All")
+            row.operator("mts.remove_all_collisions_from_group", text="Remove All")
         else:
             row.operator("mts.assign_collision_to_group", text="Assign")
-        
-        row.operator("mts.remove_collision_from_group", text="Remove")
+            row.operator("mts.remove_collision_from_group", text="Remove")
         
         layout.separator()
         
@@ -944,7 +993,8 @@ classes = (
     MTS_OT_DeleteGroupFromList,
     MTS_OT_AssignCollisionToGroup,
     MTS_OT_DeleteCollisionFromGroup,
-    # MTS_OT_AssignAllToGroup,
+    MTS_OT_AssignAllCollisionsToGroup,
+    MTS_OT_RemoveAllCollisionsFromGroup,
     CollisionBoxItem,
     CollisionBoxPointer,
     CollisionGroupItem,
