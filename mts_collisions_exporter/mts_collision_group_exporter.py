@@ -272,11 +272,8 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                     f.write("\n\t\t\t\t//{name}\n\t\t\t\t{bracket}\n".format(name=collision.name, bracket="{"))
                 else:
                     f.write(",\n\t\t\t\t//{name}\n\t\t\t\t{bracket}\n".format(name=collision.name, bracket="{"))
-                    
-                if  (collision.mts_collision_settings.subdivideWidth > 0) or (collision.dimensions[0] != collision.dimensions[1]):
-                    self.divide_collision_box(collision, f, context)
-                else:
-                    self.export_collision_box(collision.location, collision.dimensions, collision.mts_collision_settings, f, context)
+
+                self.export_collision_box(collision.location, collision.dimensions, collision.mts_collision_settings, f, context)
             
                 firstCollisionEntry = False
             
@@ -292,93 +289,13 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         f.write("\n\t]\n}")
 
         return {'FINISHED'}
-    
-    def divide_collision_box(self, obj, f, context):
-        # We need to break this box into smaller boxes
-        if obj.mts_collision_settings.subdivideWidth > 0 or obj.mts_collision_settings.subdivideHeight:
-            # Boxes are of a specified size
-            boxSize = obj.mts_collision_settings.subdivideWidth if obj.mts_collision_settings.subdivideWidth > 0 else min(obj.dimensions[0], obj.dimensions[1])
-            if boxSize > min(obj.dimensions[0], obj.dimensions[1]):
-                boxSize = min(obj.dimensions[0], obj.dimensions[1])
-            boxSizeZ = obj.mts_collision_settings.subdivideHeight if obj.mts_collision_settings.subdivideHeight > 0 else obj.dimensions[2]
-            if boxSizeZ > obj.dimensions[2]:
-                boxSizeZ = obj.dimensions[2]
-            numX = math.ceil(obj.dimensions[0] / boxSize)
-            numY = math.ceil(obj.dimensions[1] / boxSize)
-            numZ = math.ceil(obj.dimensions[2] / boxSizeZ)
-        else:
-            # Length and width are unequal, so break it into multiple boxes in the long axis ONLY
-            boxSize = min(obj.dimensions[0], obj.dimensions[1])
-            if obj.dimensions[0] > obj.dimensions[1]:
-                #X is the longer axis
-                numX = math.ceil(obj.dimensions[0] / obj.dimensions[1])
-                numY = 1
-            else:
-                #Y is the longer axis
-                numX = 1
-                numY = math.ceil(obj.dimensions[1] / obj.dimensions[0])
-            numZ = 1
-            boxSizeZ = obj.dimensions[2]
 
-        # Determine how much total overlap there is, if any, in each axis
-        overlapX = numX*boxSize - obj.dimensions[0]
-        overlapY = numY*boxSize - obj.dimensions[1]
-        overlapZ = numZ*boxSizeZ - obj.dimensions[2]
-        # Divide by the number of overlaps, unless there are none
-        overlapXper = overlapX / (numX-1) if numX>1 else 0
-        overlapYper = overlapY / (numY-1) if numY>1 else 0
-        overlapZper = overlapZ / (numZ-1) if numZ>1 else 0
-
-        # List the coordinates for each dimension
-        # Different calculations for even vs odd numbers of boxes
-        origin = obj.location
-        offset = 0 if numX % 2 == 1 else 0.5*(boxSize - overlapXper)
-        xList = [origin[0]] if numX % 2 == 1 else [origin[0] - offset, origin[0] + offset]
-        for n in range((numX-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
-            # Add the next furthest box on each side
-            xList.insert(0, origin[0] - offset - (n+1)*(boxSize-overlapXper))
-            xList.append(origin[0] + offset + (n+1)*(boxSize-overlapXper))
-
-        offset = 0 if numY % 2 == 1 else 0.5*(boxSize - overlapYper)
-        yList = [origin[1]] if numY % 2 == 1 else [origin[1] - offset, origin[1] + offset]
-        for n in range((numY-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
-            # Add the next furthest box on each side
-            listLen = len(yList)
-            yList.insert(0, origin[1] - offset - (n+1)*(boxSize-overlapYper))
-            yList.append(origin[1] + offset + (n+1)*(boxSize-overlapYper))
-
-        offset = 0 if numZ % 2 == 1 else 0.5*(boxSizeZ - overlapZper)
-        zList = [origin[2]] if numZ % 2 == 1 else [origin[2] - offset, origin[2] + offset]
-        for n in range((numZ-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
-            # Add the next furthest box on each side
-            listLen = len(zList)
-            zList.insert(0, origin[2] - offset - (n+1)*(boxSizeZ-overlapZper))
-            zList.append(origin[2] + offset + (n+1)*(boxSizeZ-overlapZper))
-
-        # Make numX * numY * numZ boxes
-        firstSubBox = True
-        rot = [n for n in obj.rotation_euler]
-        for x in xList:
-            for y in yList:
-                for z in zList:
-                    if not firstSubBox:
-                        f.write(",\n\t\t\t\t{\n")
-                    else:
-                        firstSubBox = False
-                    # Check if we need to rotate the positions
-                    pos = [x,y,z]
-                    if rot.count(0) == 3: # No rotation
-                        self.export_collision_box(pos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
-                    else:
-                        newPos = rotate(pos, rot, origin)
-                        self.export_collision_box(newPos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
-            
     def export_collision_box(self, location, dimensions, colset, f, context):
-        
+
         f.write("\t\t\t\t\t\"pos\":[{x}, {y}, {z}],\n".format(x=round(location[0],5), y=round(location[2],5), z=-1*round(location[1],5)))
-        
+
         f.write("\t\t\t\t\t\"width\": {}, \n".format(round(dimensions[0],5)))
-        
+
         f.write("\t\t\t\t\t\"height\": {}".format(round(dimensions[2],5)))
         
         if colset.collidesWithLiquids:
