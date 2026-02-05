@@ -5,7 +5,7 @@
 #   it under the terms of the GNU General Public License as published by
 #   the Free Software Foundation, either version 3 of the License, or
 #   (at your option) any later version.
-#   
+#
 #   This program is distributed in the hope that it will be useful,
 #   but WITHOUT ANY WARRANTY; without even the implied warranty of
 #   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -272,11 +272,8 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
                     f.write("\n\t\t\t\t//{name}\n\t\t\t\t{bracket}\n".format(name=collision.name, bracket="{"))
                 else:
                     f.write(",\n\t\t\t\t//{name}\n\t\t\t\t{bracket}\n".format(name=collision.name, bracket="{"))
-                    
-                if  (collision.mts_collision_settings.subdivideWidth > 0) or (collision.dimensions[0] != collision.dimensions[1]):
-                    self.divide_collision_box(collision, f, context)
-                else:
-                    self.export_collision_box(collision.location, collision.dimensions, collision.mts_collision_settings, f, context)
+
+                self.export_collision_box(collision.location, collision.dimensions, collision.mts_collision_settings, f, context)
             
                 firstCollisionEntry = False
             
@@ -292,93 +289,13 @@ class MTS_OT_ExportCollisions(bpy.types.Operator, ExportHelper):
         f.write("\n\t]\n}")
 
         return {'FINISHED'}
-    
-    def divide_collision_box(self, obj, f, context):
-        # We need to break this box into smaller boxes
-        if obj.mts_collision_settings.subdivideWidth > 0 or obj.mts_collision_settings.subdivideHeight:
-            # Boxes are of a specified size
-            boxSize = obj.mts_collision_settings.subdivideWidth if obj.mts_collision_settings.subdivideWidth > 0 else min(obj.dimensions[0], obj.dimensions[1])
-            if boxSize > min(obj.dimensions[0], obj.dimensions[1]):
-                boxSize = min(obj.dimensions[0], obj.dimensions[1])
-            boxSizeZ = obj.mts_collision_settings.subdivideHeight if obj.mts_collision_settings.subdivideHeight > 0 else obj.dimensions[2]
-            if boxSizeZ > obj.dimensions[2]:
-                boxSizeZ = obj.dimensions[2]
-            numX = math.ceil(obj.dimensions[0] / boxSize)
-            numY = math.ceil(obj.dimensions[1] / boxSize)
-            numZ = math.ceil(obj.dimensions[2] / boxSizeZ)
-        else:
-            # Length and width are unequal, so break it into multiple boxes in the long axis ONLY
-            boxSize = min(obj.dimensions[0], obj.dimensions[1])
-            if obj.dimensions[0] > obj.dimensions[1]:
-                #X is the longer axis
-                numX = math.ceil(obj.dimensions[0] / obj.dimensions[1])
-                numY = 1
-            else:
-                #Y is the longer axis
-                numX = 1
-                numY = math.ceil(obj.dimensions[1] / obj.dimensions[0])
-            numZ = 1
-            boxSizeZ = obj.dimensions[2]
 
-        # Determine how much total overlap there is, if any, in each axis
-        overlapX = numX*boxSize - obj.dimensions[0]
-        overlapY = numY*boxSize - obj.dimensions[1]
-        overlapZ = numZ*boxSizeZ - obj.dimensions[2]
-        # Divide by the number of overlaps, unless there are none
-        overlapXper = overlapX / (numX-1) if numX>1 else 0
-        overlapYper = overlapY / (numY-1) if numY>1 else 0
-        overlapZper = overlapZ / (numZ-1) if numZ>1 else 0
-
-        # List the coordinates for each dimension
-        # Different calculations for even vs odd numbers of boxes
-        origin = obj.location
-        offset = 0 if numX % 2 == 1 else 0.5*(boxSize - overlapXper)
-        xList = [origin[0]] if numX % 2 == 1 else [origin[0] - offset, origin[0] + offset]
-        for n in range((numX-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
-            # Add the next furthest box on each side
-            xList.insert(0, origin[0] - offset - (n+1)*(boxSize-overlapXper))
-            xList.append(origin[0] + offset + (n+1)*(boxSize-overlapXper))
-
-        offset = 0 if numY % 2 == 1 else 0.5*(boxSize - overlapYper)
-        yList = [origin[1]] if numY % 2 == 1 else [origin[1] - offset, origin[1] + offset]
-        for n in range((numY-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
-            # Add the next furthest box on each side
-            listLen = len(yList)
-            yList.insert(0, origin[1] - offset - (n+1)*(boxSize-overlapYper))
-            yList.append(origin[1] + offset + (n+1)*(boxSize-overlapYper))
-
-        offset = 0 if numZ % 2 == 1 else 0.5*(boxSizeZ - overlapZper)
-        zList = [origin[2]] if numZ % 2 == 1 else [origin[2] - offset, origin[2] + offset]
-        for n in range((numZ-1) // 2): #Ignore the middle 1 or 2 boxes, those were added in the line above
-            # Add the next furthest box on each side
-            listLen = len(zList)
-            zList.insert(0, origin[2] - offset - (n+1)*(boxSizeZ-overlapZper))
-            zList.append(origin[2] + offset + (n+1)*(boxSizeZ-overlapZper))
-
-        # Make numX * numY * numZ boxes
-        firstSubBox = True
-        rot = [n for n in obj.rotation_euler]
-        for x in xList:
-            for y in yList:
-                for z in zList:
-                    if not firstSubBox:
-                        f.write(",\n\t\t\t\t{\n")
-                    else:
-                        firstSubBox = False
-                    # Check if we need to rotate the positions
-                    pos = [x,y,z]
-                    if rot.count(0) == 3: # No rotation
-                        self.export_collision_box(pos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
-                    else:
-                        newPos = rotate(pos, rot, origin)
-                        self.export_collision_box(newPos, [boxSize,boxSize,boxSizeZ], obj.mts_collision_settings, f, context)
-            
     def export_collision_box(self, location, dimensions, colset, f, context):
-        
+
         f.write("\t\t\t\t\t\"pos\":[{x}, {y}, {z}],\n".format(x=round(location[0],5), y=round(location[2],5), z=-1*round(location[1],5)))
-        
+
         f.write("\t\t\t\t\t\"width\": {}, \n".format(round(dimensions[0],5)))
-        
+
         f.write("\t\t\t\t\t\"height\": {}".format(round(dimensions[2],5)))
         
         if colset.collidesWithLiquids:
@@ -509,7 +426,43 @@ class MTS_OT_AssignAllCollisionsToGroup(bpy.types.Operator):
             bpy.ops.mts.assign_collision_to_group()
         
         return {'FINISHED'}
+        
+#Operator: Unssign All Selected Cubes from Collision Group
+class MTS_OT_RemoveAllCollisionsFromGroup(bpy.types.Operator):
+    bl_idname = "mts.remove_all_collisions_from_group"
+    bl_label = "(MTS/IV) Remove All Selected Collisions From Active Group"
+    bl_description = "Unassign all selected collision boxes from the active collision group"
 
+    @classmethod
+    def poll(cls, context):
+        # Only active if there’s at least one group and more than one object selected
+        return (context.scene.mts_collision_groups and
+                len(context.selected_objects) > 0)
+
+    def execute(self, context):
+        scene = context.scene
+        group = scene.mts_collision_groups[scene.mts_collision_groups_index]
+        removed = 0
+
+        for obj in context.selected_objects:
+            # find this object in the group's collisions
+            for i, ptr in enumerate(group.collisions):
+                if ptr.collision == obj:
+                    # clear its settings
+                    obj.mts_collision_settings.self_index = -1
+                    obj.mts_collision_settings.assignedCollisionGroupIndex = -1
+                    # remove it
+                    group.collisions.remove(i)
+                    removed += 1
+                    break
+
+        # clamp active index
+        if group.collision_index >= len(group.collisions):
+            group.collision_index = max(0, len(group.collisions) - 1)
+
+        self.report({'INFO'}, f"Unassigned {removed} object(s).")
+        return {'FINISHED'}
+        
 #Operator: Delete Active Collision From Group
 class MTS_OT_DeleteCollisionFromGroup(bpy.types.Operator):
     bl_idname = "mts.remove_collision_from_group"
@@ -523,21 +476,34 @@ class MTS_OT_DeleteCollisionFromGroup(bpy.types.Operator):
     def execute(self, context):
         collision_group_list = context.scene.mts_collision_groups
         cg_index = context.scene.mts_collision_groups_index
-        
         active_group = collision_group_list[cg_index]
-        
-        if len(active_group.collisions) > 0:
-            active_collision = active_group.collisions[active_group.collision_index]
-                    
-            if active_collision.collision:
-                print("Removed collision" + active_collision.collision.name + " from group " + active_group.name)
-                active_collision.collision.mts_collision_settings.self_index = -1
-                active_collision.collision.mts_collision_settings.assignedCollisionGroupIndex = -1
-                
-            active_group.collisions.remove(active_group.collision_index)
-            new_index = min(max(0, active_group.collision_index - 1), len(active_group.collisions) - 1)
-            active_group.collision_index = new_index if new_index >= 0 else 0
-        
+
+        selected_obj = context.active_object
+        if not selected_obj:
+            self.report({'WARNING'}, "No object selected.")
+            return {'CANCELLED'}
+
+        found_index = -1
+        for i, col_ptr in enumerate(active_group.collisions):
+            if col_ptr.collision == selected_obj:
+                found_index = i
+                break
+
+        if found_index == -1:
+            self.report({'WARNING'}, "Selected object is not assigned to this group.")
+            return {'CANCELLED'}
+
+        # Clear object settings BEFORE removing from collection
+        selected_obj.mts_collision_settings.self_index = -1
+        selected_obj.mts_collision_settings.assignedCollisionGroupIndex = -1
+
+        active_group.collisions.remove(found_index)
+
+        # Update the group's collision_index safely
+        if active_group.collision_index >= len(active_group.collisions):
+            active_group.collision_index = max(0, len(active_group.collisions) - 1)
+
+        self.report({'INFO'}, f"Removed {selected_obj.name} from {active_group.name}")
         return {'FINISHED'}
 
 #PropertyGroup: Collision Box
@@ -797,10 +763,10 @@ class MTS_PT_MTSCollisionPanel(Panel):
 
         if len(context.selected_objects) > 1: 
             row.operator("mts.assign_all_collisions_to_group", text="Assign All")
+            row.operator("mts.remove_all_collisions_from_group", text="Remove All")
         else:
             row.operator("mts.assign_collision_to_group", text="Assign")
-        
-        row.operator("mts.remove_collision_from_group", text="Remove")
+            row.operator("mts.remove_collision_from_group", text="Remove")
         
         layout.separator()
         
@@ -944,7 +910,8 @@ classes = (
     MTS_OT_DeleteGroupFromList,
     MTS_OT_AssignCollisionToGroup,
     MTS_OT_DeleteCollisionFromGroup,
-    # MTS_OT_AssignAllToGroup,
+    MTS_OT_AssignAllCollisionsToGroup,
+    MTS_OT_RemoveAllCollisionsFromGroup,
     CollisionBoxItem,
     CollisionBoxPointer,
     CollisionGroupItem,
